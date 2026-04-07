@@ -66,19 +66,7 @@ export const fetchIOTDeviceTelemetry = async (
 };
 
 const mockIOTDevices: IOTDevice[] = [
-  {
-    _id: '69c2959b6928f8e78c62834a',
-    appIotId: 'KS_E49DD971FE68',
-    appIotName: 'สถานีทดสอบ บจก.แอโร กรุ๊ป (1992)',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'สวนทดสอบ',
-    tambon: 'ลำผักกูด',
-    amphur: 'ธัญบุรี',
-    province: 'ปทุมธานี',
-    lat: 14.018601684415657,
-    lon: 100.76597861945629,
-  },
+
   {
     _id: '69c2959b6928f8e78c62834b',
     appIotId: 'KS_E49DD971FE69',
