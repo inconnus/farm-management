@@ -25,7 +25,7 @@ export const useIOTTelemetryQueries = (appIotIds: string[]) => {
   return useQueries({
     queries: appIotIds.map((appIotId) => ({
       ...iotDeviceQueries.telemetry(appIotId),
-      refetchInterval: 30000,
+      refetchInterval: 10000,
     })),
   });
 };
