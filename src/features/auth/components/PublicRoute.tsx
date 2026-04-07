@@ -38,7 +38,7 @@ export function PublicRoute({ children }: PublicRouteProps) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/org/select" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
