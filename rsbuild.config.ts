@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [pluginReact()],
   html: {
     title: 'Agriculture',
+    favicon: './public/images/icon.png',
   },
   resolve: {
     alias: {

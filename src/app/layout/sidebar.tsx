@@ -91,8 +91,8 @@ const Sidebar = () => {
 
         <Row className="items-center gap-2">
           <Avatar size="sm">
-            <Avatar.Image src="https://github.com/shadcn.png" />
-            <Avatar.Fallback>CN</Avatar.Fallback>
+            {/* <Avatar.Image src="https://github.com/shadcn.png" /> */}
+            <Avatar.Fallback>{user?.email?.slice(0, 2).toUpperCase()}</Avatar.Fallback>
           </Avatar>
           <Column className="min-w-0 flex-1">
             <span className="text-sm truncate block">{user?.user_metadata?.full_name}</span>
