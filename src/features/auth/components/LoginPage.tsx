@@ -30,8 +30,7 @@ export function LoginPage() {
 
     try {
       const userId = data.user?.id;
-      navigate('/dashboard', { replace: true });
-      return
+
       if (!userId) {
         navigate('/org/select', { replace: true });
         return;
@@ -41,7 +40,7 @@ export function LoginPage() {
 
       if (orgs.length === 1) {
         setCurrentOrg(orgs[0]);
-        navigate('/farms', { replace: true });
+        navigate('/dashboard', { replace: true });
       } else {
         navigate('/org/select', { replace: true });
       }
