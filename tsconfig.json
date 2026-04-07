@@ -1,9 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "DOM",
-      "ES2020"
-    ],
+    "lib": ["DOM", "ES2020"],
     "jsx": "react-jsx",
     "target": "ES2020",
     "noEmit": true,
@@ -23,16 +20,13 @@
     "noUnusedParameters": true,
     "baseUrl": ".",
     "paths": {
-      "styled-system/*": [
-        "styled-system/*"
-      ],
-      "@components/*": [
-        "src/components/*"
-      ]
+      "styled-system/*": ["styled-system/*"],
+      "@app/*": ["src/app/*"],
+      "@features/*": ["src/features/*"],
+      "@shared/*": ["src/shared/*"],
+      "@lib/*": ["src/shared/lib/*"],
+      "@store/*": ["src/shared/store/*"]
     }
   },
-  "include": [
-    "src",
-    "styled-system"
-  ]
+  "include": ["src", "styled-system"]
 }

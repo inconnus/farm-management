@@ -18,3 +18,8 @@ dist/
 ## Panda
 styled-system
 styled-system-studio
+
+# Environment Variables
+.env
+.env.*
+!.env.example

@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@keyframes glowing-pin-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@theme {
+  --font-sans: "Prompt", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --animate-glowing-pin-pulse: glowing-pin-pulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+:root,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+:root {
+  --separator: #c9c9c947;
+}
+
+body {
+  font-family: var(--font-sans) !important;
+}
+
+.mapboxgl-map {
+  font-family: var(--font-sans) !important;
+}
+
+#map-container {
+  flex: 1;
+  width: 100%;
+  background-color: lightgrey;
+}
+
+.mapboxgl-ctrl-bottom-right {
+  border-radius: 10px 0 0 0;
+  overflow: hidden;
+}
+
+.mapboxgl-ctrl-bottom-left {
+  bottom: 15px !important;
+  right: 0px !important;
+  left: auto !important;
+}
+
+.custom-popup-portal {
+  z-index: 1;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.custom-popup-portal .mapboxgl-popup-content {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 1rem;
+  pointer-events: auto;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.custom-popup-portal .mapboxgl-popup-tip {
+  border-right-color: rgba(255, 255, 255, 0.9);
+  align-self: center;
+  will-change: transform;
+}
+
+.custom-marker-popup .mapboxgl-popup-content {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 1rem;
+  pointer-events: auto;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.custom-marker-popup .mapboxgl-popup-tip {
+  display: none !important;
+}
