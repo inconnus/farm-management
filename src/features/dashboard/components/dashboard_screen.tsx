@@ -314,20 +314,6 @@ const DashboardScreen = () => {
                                     }
                                     popup={
                                         <div className="p-3.5 bg-white text-gray-800 min-w-[240px] rounded-xl shadow-lg relative font-sans border border-gray-100">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const mapboxCloseBtn = (e.target as HTMLElement)
-                                                        .closest('.mapboxgl-popup')
-                                                        ?.querySelector(
-                                                            '.mapboxgl-popup-close-button',
-                                                        ) as HTMLButtonElement | null;
-                                                    if (mapboxCloseBtn) mapboxCloseBtn.click();
-                                                }}
-                                                className="absolute top-1.5 right-1.5 text-gray-400 hover:text-gray-800"
-                                            >
-                                                <XIcon size={16} />
-                                            </button>
 
                                             <div className="mb-3 pr-6 text-left">
                                                 <h3 className="font-bold tracking-wide uppercase text-xs">
