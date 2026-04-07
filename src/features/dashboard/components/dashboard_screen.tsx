@@ -219,7 +219,7 @@ const DashboardScreen = () => {
             <Column className="pointer-events-auto bg-white/85  backdrop-blur-xl m-3 p-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden">
                 <div className="px-3 pt-2 pb-2 flex items-center justify-center">
                     <span className="text-[17px] font-semibold text-gray-900">
-                        อุปกรณ์ทั้งหมด
+                        อุปกรณ์ทั้งหมด ({iotDevices?.length})
                     </span>
                 </div>
 
