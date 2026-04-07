@@ -60,7 +60,7 @@ const App = () => {
               <MapView />
               <FarmSidebar>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/farms" replace />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/farms" element={<FarmsSidebar />}>
                     <Route index element={<></>} />
                     <Route path=":farmId" element={<></>} />
