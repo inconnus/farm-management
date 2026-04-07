@@ -261,8 +261,7 @@ const DashboardScreen = () => {
                                     {/* Row 1: status dot + name + ID */}
                                     <div className="flex items-center gap-2 mb-1">
                                         <span
-                                            // className={`size-2 rounded-full shrink-0 ${telemetry ? 'bg-green-500' : 'bg-red-400'
-                                            className={`size-2 rounded-full shrink-0 ${telemetry ? 'bg-green-500' : 'bg-green-500'
+                                            className={`size-2 rounded-full shrink-0 ${telemetry ? 'bg-green-500' : 'bg-red-400'
                                                 }`}
                                         />
                                         <span className="text-sm font-semibold text-gray-900 truncate flex-1">
