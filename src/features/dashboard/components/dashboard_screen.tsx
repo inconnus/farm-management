@@ -214,6 +214,7 @@ const DashboardScreen = () => {
             map.flyTo(DEFAULT_MAP_OVERVIEW);
         }
     }, [map, deviceId, iotDevices]);
+    //
     return (
         <>
             <Column className="pointer-events-auto bg-white/85  backdrop-blur-xl m-3 p-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden">
