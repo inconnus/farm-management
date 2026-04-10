@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { useAtomValue } from 'jotai';
-import { supabase } from './client';
 import { isAuthenticatedAtom } from '@features/auth/store';
+import { useAtomValue } from 'jotai';
+import { useEffect, useRef } from 'react';
+import { supabase } from './client';
 
 type RealtimeOptions = {
   channel: string;

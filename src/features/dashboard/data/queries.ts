@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { fetchIOTDevices, fetchGetLand, fetchIOTDeviceTelemetry } from './api';
+import { fetchGetLand, fetchIOTDevices, fetchIOTDeviceTelemetry } from './api';
 
 export const iotDeviceQueries = {
   all: () =>

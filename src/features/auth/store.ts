@@ -1,7 +1,7 @@
-import { atom } from 'jotai';
-import type { Session, User } from '@supabase/supabase-js';
 import type { Tables } from '@lib/supabase/database.types';
 import type { OrgMembership } from '@store/orgStore';
+import type { Session, User } from '@supabase/supabase-js';
+import { atom } from 'jotai';
 
 export type Profile = Tables<'profiles'>;
 

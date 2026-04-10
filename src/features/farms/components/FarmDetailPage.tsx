@@ -1,8 +1,13 @@
 import { Column, Row } from '@app/layout';
 import { Button, Chip, Label, Separator, Tabs } from '@heroui/react';
-import { useSetAtom } from 'jotai';
-import { ChevronLeft, ChevronRight, MapPinIcon } from 'lucide-react';
 import { triggerSelectLandAtom } from '@store/selectionStore';
+import { useSetAtom } from 'jotai';
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPinIcon,
+  SearchIcon,
+} from 'lucide-react';
 import type { Farm, Land } from '../transforms';
 
 type Props = {
@@ -18,7 +23,7 @@ export const FarmDetailPage = ({ farm, onBack }: Props) => {
   };
 
   return (
-    <Column>
+    <Column className="flex flex-col p-3 max-h-[calc(90vh)] ">
       <div className="px-2 pt-1 pb-2">
         <Row className="items-center">
           <Button
@@ -36,10 +41,18 @@ export const FarmDetailPage = ({ farm, onBack }: Props) => {
           <div className="w-16 shrink-0" />
         </Row>
       </div>
+      <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
+        <SearchIcon size={14} className="text-gray-400 shrink-0" />
+        <input
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          placeholder="ค้นหา"
+          // value={searchText}
+          // onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </Row>
+      <Separator className="my-2" />
 
-      <Separator />
-
-      <Row className="items-center gap-3 px-4 py-3">
+      {/* <Row className="items-center gap-3 px-4 py-3">
         <img
           src={farm.image}
           alt={farm.name}
@@ -55,9 +68,7 @@ export const FarmDetailPage = ({ farm, onBack }: Props) => {
             <Chip.Label className="text-[11px]">{farm.province}</Chip.Label>
           </Chip>
         </Column>
-      </Row>
-
-      <Separator />
+      </Row> */}
 
       <div className="px-3 pt-2 pb-3">
         <Tabs className="w-full" variant="secondary">
@@ -76,7 +87,7 @@ export const FarmDetailPage = ({ farm, onBack }: Props) => {
           </Tabs.ListContainer>
 
           <Tabs.Panel className="p-0 pt-2" id="plots">
-            <Column className="gap-1.5 bg-white/50 rounded-2xl p-2">
+            <Column className="gap-1.5  rounded-2xl p-2">
               {farm.lands.map((land) => (
                 <Row
                   key={land.id}

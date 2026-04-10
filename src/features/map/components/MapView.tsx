@@ -1,19 +1,21 @@
 import mapboxgl from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { useLandsQuery } from '@features/farms/hooks/useLandsQuery';
+import { toLandData } from '@features/farms/transforms';
+import { useTasksQuery } from '@features/tasks/hooks/useTasksQuery';
 import { Tabs } from '@heroui/react';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import type { LandData } from '@shared/types/lands';
 import { isPolygonEditModeAtom, mapInstanceAtom } from '@store/mapStore';
 import {
-  selectLandAtom,
   selectedLandAtom,
+  selectLandAtom,
   triggerSelectLandAtom,
 } from '@store/selectionStore';
-import type { LandData } from '@shared/types/lands';
-import { toLandData } from '@features/farms/transforms';
-import { useLandsQuery } from '@features/farms/hooks/useLandsQuery';
-import { useTasksQuery } from '@features/tasks/hooks/useTasksQuery';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTilesetsQuery } from '../hooks/useTilesetsQuery';
+import { devicePopupAtom } from '../store/devicePopupAtom';
+import { CameraPopup } from './CameraPopup';
 import {
   LandPopupContent,
   type LandPopupData,
@@ -21,12 +23,10 @@ import {
   PolygonMarker,
   WeatherWidget,
 } from './index';
-import { TaskLabel } from './TaskLabel';
-import { CameraPopup } from './CameraPopup';
-import { SolarCellPopup } from './SolarCellPopup';
-import { devicePopupAtom } from '../store/devicePopupAtom';
 import { MapPolygonDrawMount } from './MapPolygonDrawMount';
 import { MapStyleSwitcher } from './MapStyleSwitcher';
+import { SolarCellPopup } from './SolarCellPopup';
+import { TaskLabel } from './TaskLabel';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -190,9 +190,9 @@ const MapView = () => {
         if (feature) {
           const landId = String(
             feature.properties?.landId ??
-            feature.properties?.user_landId ??
-            feature.id ??
-            '',
+              feature.properties?.user_landId ??
+              feature.id ??
+              '',
           );
           const landData = landRef.current.find((l) => l.id === landId);
           if (landData) {

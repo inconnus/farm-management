@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router-dom';
 import { useAtomValue } from 'jotai';
+import { Navigate } from 'react-router-dom';
 import { isAuthenticatedAtom, isAuthInitializedAtom } from '../store';
 
 type PublicRouteProps = {

@@ -1,6 +1,6 @@
+import type MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { atom } from 'jotai';
 import type { Map } from 'mapbox-gl';
-import type MapboxDraw from '@mapbox/mapbox-gl-draw';
 
 // Atom for storing the map instance
 export const mapInstanceAtom = atom<Map | null>(null);

@@ -1,6 +1,6 @@
-import { Navigate } from 'react-router-dom';
-import { useAtomValue } from 'jotai';
 import { currentOrgAtom } from '@store/orgStore';
+import { useAtomValue } from 'jotai';
+import { Navigate } from 'react-router-dom';
 import { isAuthInitializedAtom, organizationsAtom } from '../store';
 
 type OrgRequiredRouteProps = {

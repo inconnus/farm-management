@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAtomValue } from 'jotai';
 import { mapInstanceAtom } from '@store/mapStore';
+import { useAtomValue } from 'jotai';
 import { Box, Orbit } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type MapStyleOption = {
   id: string;
@@ -86,7 +86,7 @@ export const MapStyleSwitcher = () => {
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-4 left-4 z-20 flex flex-col items-start gap-2"
+      className="absolute bottom-10 left-4 z-20 flex flex-col items-start gap-2"
     >
       {/* Perspective toggle */}
       <button

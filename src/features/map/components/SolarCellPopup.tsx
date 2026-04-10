@@ -3,9 +3,9 @@ import { Card } from '@heroui/react';
 import {
   BatteryChargingIcon,
   SunIcon,
-  ZapIcon,
-  TrendingUpIcon,
   ThermometerSunIcon,
+  TrendingUpIcon,
+  ZapIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { SolarCellData } from './SolarCellMarker';

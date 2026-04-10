@@ -1,6 +1,6 @@
+import type { TeamMember } from '@features/map/types';
 import { supabase } from '@lib/supabase/client';
 import type { Tables } from '@lib/supabase/database.types';
-import type { TeamMember } from '@features/map/types';
 
 // ─── Types ───────────────────────────────────────────────
 

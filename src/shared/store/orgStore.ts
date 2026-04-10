@@ -1,5 +1,5 @@
-import { atom } from 'jotai';
 import type { Tables } from '@lib/supabase/database.types';
+import { atom } from 'jotai';
 
 export type Organization = Tables<'organizations'>;
 

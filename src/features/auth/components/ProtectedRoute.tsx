@@ -1,5 +1,5 @@
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAtomValue } from 'jotai';
+import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticatedAtom, isAuthInitializedAtom } from '../store';
 
 type ProtectedRouteProps = {

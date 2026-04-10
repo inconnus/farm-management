@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import { useAtomValue } from 'jotai';
 import { drawInstanceAtom } from '@shared/store/mapStore';
+import { useAtomValue } from 'jotai';
+import { useEffect, useMemo } from 'react';
 
 type MapPolygonMountProps = {
   id: string;

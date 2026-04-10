@@ -1,5 +1,5 @@
-import { atom } from 'jotai';
 import type { LandData } from '@shared/types/lands';
+import { atom } from 'jotai';
 
 export const triggerSelectLandAtom = atom<LandData | null>(null);
 

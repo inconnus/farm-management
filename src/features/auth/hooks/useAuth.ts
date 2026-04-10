@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { clearCurrentOrgAtom } from '@store/orgStore';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { useCallback } from 'react';
 import * as authApi from '../api';
 import {
   authAtom,
@@ -9,7 +10,6 @@ import {
   sessionAtom,
   userAtom,
 } from '../store';
-import { clearCurrentOrgAtom } from '@store/orgStore';
 
 export function useAuth() {
   const user = useAtomValue(userAtom);

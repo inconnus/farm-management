@@ -1,5 +1,5 @@
 import type { LandData } from '@shared/types/lands';
-import type { DbFarmWithLands, DbLandInFarm, DbLand } from './api';
+import type { DbFarmWithLands, DbLand, DbLandInFarm } from './api';
 
 export type { LandData as Land };
 

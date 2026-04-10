@@ -2,11 +2,11 @@ import { mapInstanceAtom } from '@store/mapStore';
 import { useAtomValue } from 'jotai';
 import mapboxgl from 'mapbox-gl';
 import {
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -20,6 +20,7 @@ type MapMarkerMountProps = {
   closePopupSignal?: number;
   /** Increment to forcefully open the popup programmatically. */
   openPopupSignal?: number;
+  anchor?: 'center' | 'top' | 'bottom' | 'left' | 'right';
 };
 
 export function MapMarkerMount({
@@ -30,6 +31,7 @@ export function MapMarkerMount({
   onClick,
   closePopupSignal = 0,
   openPopupSignal = 0,
+  anchor = 'center',
 }: MapMarkerMountProps) {
   const map = useAtomValue(mapInstanceAtom);
   const [markerNode] = useState(() => document.createElement('div'));
@@ -37,6 +39,7 @@ export function MapMarkerMount({
   const [popupContainer, setPopupContainer] = useState<HTMLDivElement | null>(
     null,
   );
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
 
   const hasPopup = popup != null;
@@ -48,7 +51,7 @@ export function MapMarkerMount({
 
     const marker = new mapboxgl.Marker({
       element: hasCustomMarker ? markerNode : undefined,
-      anchor: 'center',
+      anchor: anchor,
     }).setLngLat([lng, lat]);
 
     markerRef.current = marker;
@@ -59,13 +62,17 @@ export function MapMarkerMount({
     if (hasPopup) {
       const mount = document.createElement('div');
       setPopupContainer(mount);
-      marker.setPopup(
-        new mapboxgl.Popup({
-          anchor: 'bottom',
-          closeButton: false,
-          className: 'custom-marker-popup',
-        }).setDOMContent(mount),
-      );
+
+      const p = new mapboxgl.Popup({
+        anchor: 'bottom',
+        closeButton: false,
+        className: 'custom-marker-popup',
+      }).setDOMContent(mount);
+
+      p.on('open', () => setIsPopupOpen(true));
+      p.on('close', () => setIsPopupOpen(false));
+
+      marker.setPopup(p);
     }
 
     marker.addTo(map);
@@ -109,7 +116,7 @@ export function MapMarkerMount({
   return (
     <>
       {createPortal(children, markerNode)}
-      {popupContainer != null && popup != null
+      {popupContainer != null && popup != null && isPopupOpen
         ? createPortal(popup, popupContainer)
         : null}
     </>

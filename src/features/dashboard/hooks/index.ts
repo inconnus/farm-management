@@ -1,5 +1,5 @@
-import { iotDeviceQueries, landQueries } from '../data/queries';
 import { useQueries, useQuery } from '@tanstack/react-query';
+import { iotDeviceQueries, landQueries } from '../data/queries';
 
 export const useIOTDevicesQuery = () => {
   return useQuery({

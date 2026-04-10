@@ -1,10 +1,10 @@
-import { type ReactNode, useEffect } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
 import { supabase } from '@lib/supabase/client';
-import { authAtom } from '../store';
+import { getPersistedOrgId, setCurrentOrgAtom } from '@store/orgStore';
+import { useAtom, useSetAtom } from 'jotai';
+import { type ReactNode, useEffect } from 'react';
 import { fetchProfile } from '../api';
 import { fetchUserOrganizations } from '../orgApi';
-import { getPersistedOrgId, setCurrentOrgAtom } from '@store/orgStore';
+import { authAtom } from '../store';
 
 type AuthProviderProps = {
   children: ReactNode;

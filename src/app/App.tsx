@@ -1,5 +1,4 @@
 import './App.css';
-import { Navigate, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@app/layout';
 import { FarmSidebar } from '@app/layout/FarmSidebar';
 import Sidebar from '@app/layout/sidebar';
@@ -12,9 +11,11 @@ import {
   RegisterPage,
   ResetPasswordPage,
 } from '@features/auth';
-import MapView from '@features/map';
-import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
+import CameraScreen from '@features/camera/components/camera_screen';
 import DashboardScreen from '@features/dashboard/components/dashboard_screen';
+import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
+import MapView from '@features/map';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 const App = () => {
   return (
@@ -60,12 +61,19 @@ const App = () => {
               <MapView />
               <FarmSidebar>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                  />
                   <Route path="/farms" element={<FarmsSidebar />}>
                     <Route index element={<></>} />
                     <Route path=":farmId" element={<></>} />
                   </Route>
                   <Route path="/dashboard" element={<DashboardScreen />}>
+                    <Route index element={<></>} />
+                    <Route path=":deviceId" element={<></>} />
+                  </Route>
+                  <Route path="/camera" element={<CameraScreen />}>
                     <Route index element={<></>} />
                     <Route path=":deviceId" element={<></>} />
                   </Route>

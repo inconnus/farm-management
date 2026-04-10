@@ -1,6 +1,6 @@
 import { isAuthenticatedAtom } from '@features/auth/store';
-import { currentOrgIdAtom } from '@store/orgStore';
 import { useRealtimeSubscription } from '@lib/supabase/useRealtimeSubscription';
+import { currentOrgIdAtom } from '@store/orgStore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
 import { farmQueries } from '../queries';

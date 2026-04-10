@@ -1,10 +1,10 @@
+import type { OrgMembership } from '@store/orgStore';
+import { currentOrgAtom, setCurrentOrgAtom } from '@store/orgStore';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { organizationsAtom, isAuthLoadingAtom } from '../store';
-import { setCurrentOrgAtom, currentOrgAtom } from '@store/orgStore';
-import type { OrgMembership } from '@store/orgStore';
 import { useAuth } from '../hooks/useAuth';
+import { isAuthLoadingAtom, organizationsAtom } from '../store';
 
 const roleLabelMap: Record<string, string> = {
   owner: 'เจ้าของ',

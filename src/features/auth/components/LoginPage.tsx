@@ -1,9 +1,9 @@
+import { setCurrentOrgAtom } from '@store/orgStore';
+import { useSetAtom } from 'jotai';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useSetAtom } from 'jotai';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserOrganizations } from '../orgApi';
-import { setCurrentOrgAtom } from '@store/orgStore';
 
 export function LoginPage() {
   const navigate = useNavigate();

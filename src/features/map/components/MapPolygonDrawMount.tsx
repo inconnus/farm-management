@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { useAtomValue, useSetAtom } from 'jotai';
 import {
-  mapInstanceAtom,
   drawInstanceAtom,
   isPolygonEditModeAtom,
+  mapInstanceAtom,
 } from '@store/mapStore';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useEffect, useRef } from 'react';
 import { customDrawStyles } from '../draw-styles';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import type { LandData } from '@shared/types/lands';

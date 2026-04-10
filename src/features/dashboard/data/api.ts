@@ -72,21 +72,36 @@ function generateMockTelemetry(): TelemetryResponse {
       {
         topic: 'mock/telemetry',
         time: new Date().toISOString(),
-        sensor_ambient_humid: randBetween(r.sensor_ambient_humid.min, r.sensor_ambient_humid.max),
-        sensor_ambient_temperature: randBetween(r.sensor_ambient_temperature.min, r.sensor_ambient_temperature.max),
+        sensor_ambient_humid: randBetween(
+          r.sensor_ambient_humid.min,
+          r.sensor_ambient_humid.max,
+        ),
+        sensor_ambient_temperature: randBetween(
+          r.sensor_ambient_temperature.min,
+          r.sensor_ambient_temperature.max,
+        ),
         sensor_relay_0: 0,
         sensor_relay_1: 0,
         sensor_relay_2: 0,
         sensor_relay_3: 0,
         sensor_relay_4: 0,
         sensor_relay_5: 0,
-        sensor_soil_humid_humid: randBetween(r.sensor_soil_humid_humid.min, r.sensor_soil_humid_humid.max),
-        sensor_soil_humid_temperature: randBetween(r.sensor_soil_humid_temperature.min, r.sensor_soil_humid_temperature.max),
+        sensor_soil_humid_humid: randBetween(
+          r.sensor_soil_humid_humid.min,
+          r.sensor_soil_humid_humid.max,
+        ),
+        sensor_soil_humid_temperature: randBetween(
+          r.sensor_soil_humid_temperature.min,
+          r.sensor_soil_humid_temperature.max,
+        ),
         sensor_ts: Date.now(),
         sensor_voltage_v_1: 0,
         sensor_voltage_v_2: 0,
         sensor_voltage_v_3: 0,
-        sensor_voltage_v_in: randBetween(r.sensor_voltage_v_in.min, r.sensor_voltage_v_in.max),
+        sensor_voltage_v_in: randBetween(
+          r.sensor_voltage_v_in.min,
+          r.sensor_voltage_v_in.max,
+        ),
       },
     ],
   };
@@ -115,7 +130,6 @@ export const fetchIOTDeviceTelemetry = async (
 };
 
 const mockIOTDevices: IOTDevice[] = [
-
   {
     _id: '69c2959b6928f8e78c62834b',
     appIotId: 'KS_E49DD971FE69',
@@ -218,7 +232,9 @@ export const fetchIOTDevices = async (): Promise<IOTDevice[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch IoT devices');
   }
-  const apiDevices = await response.json().then((data) => data.data as IOTDevice[]);
+  const apiDevices = await response
+    .json()
+    .then((data) => data.data as IOTDevice[]);
   return [...apiDevices, ...mockIOTDevices];
 };
 
