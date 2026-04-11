@@ -93,3 +93,41 @@ body {
 .custom-marker-popup .mapboxgl-popup-tip {
   display: none !important;
 }
+
+/* ─── Camera list: mobile-style overlay scrollbar ─────────────────────────── */
+/* Shows only on hover or while scrolling; does NOT consume layout space        */
+.camera-list-scroll {
+  /* Firefox: use thin scrollbar but keep it hidden via color trick */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+}
+
+.camera-list-scroll:hover,
+.camera-list-scroll:focus-within {
+  scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge): true overlay scrollbar */
+.camera-list-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.camera-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.camera-list-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.camera-list-scroll:hover::-webkit-scrollbar-thumb,
+.camera-list-scroll:focus-within::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.22);
+}
+
+.camera-list-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.38);
+}

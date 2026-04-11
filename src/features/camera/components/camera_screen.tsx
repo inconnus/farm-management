@@ -117,7 +117,7 @@ const CameraScreen = () => {
                             ) : (
                                 <Virtuoso
                                     style={{ height: '100%' }}
-                                    className="pr-2 -mr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                    className="camera-list-scroll"
                                     data={filteredDevices || []}
                                     itemContent={(index, device) => {
                                         const isSelected = deviceId === device.id?.toString();
