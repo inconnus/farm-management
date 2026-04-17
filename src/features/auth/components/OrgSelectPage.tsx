@@ -1,7 +1,5 @@
 import type { OrgMembership } from '@store/orgStore';
-import { currentOrgAtom, setCurrentOrgAtom } from '@store/orgStore';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { useEffect } from 'react';
+import { useAtomValue } from 'jotai';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthLoadingAtom, organizationsAtom } from '../store';
@@ -22,27 +20,10 @@ export function OrgSelectPage() {
   const navigate = useNavigate();
   const organizations = useAtomValue(organizationsAtom);
   const isLoading = useAtomValue(isAuthLoadingAtom);
-  const currentOrg = useAtomValue(currentOrgAtom);
-  const setCurrentOrg = useSetAtom(setCurrentOrgAtom);
   const { signOut } = useAuth();
 
-  // useEffect(() => {
-  //   if (isLoading || organizations.length === 0) return
-
-  //   if (currentOrg) {
-  //     navigate('/farms', { replace: true })
-  //     return
-  //   }
-
-  //   if (organizations.length === 1) {
-  //     setCurrentOrg(organizations[0])
-  //     navigate('/farms', { replace: true })
-  //   }
-  // }, [organizations, isLoading, currentOrg, setCurrentOrg, navigate])
-
   const handleSelect = (org: OrgMembership) => {
-    setCurrentOrg(org);
-    navigate('/farms', { replace: true });
+    navigate(`/${org.slug}/farms`, { replace: true });
   };
 
   const handleSignOut = async () => {

@@ -1,32 +1,18 @@
 import mapboxgl from 'mapbox-gl';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useLandsQuery } from '@features/farms/hooks/useLandsQuery';
-import { toLandData } from '@features/farms/transforms';
-import { useTasksQuery } from '@features/tasks/hooks/useTasksQuery';
-import { Tabs } from '@heroui/react';
-import type { LandData } from '@shared/types/lands';
 import { isPolygonEditModeAtom, mapInstanceAtom } from '@store/mapStore';
 import {
-  selectedLandAtom,
+  clickedPolygonLandIdAtom,
   selectLandAtom,
-  triggerSelectLandAtom,
 } from '@store/selectionStore';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTilesetsQuery } from '../hooks/useTilesetsQuery';
 import { devicePopupAtom } from '../store/devicePopupAtom';
 import { CameraPopup } from './CameraPopup';
-import {
-  LandPopupContent,
-  type LandPopupData,
-  MapPopup,
-  PolygonMarker,
-  WeatherWidget,
-} from './index';
-import { MapPolygonDrawMount } from './MapPolygonDrawMount';
+import { MapPopup } from './index';
 import { MapStyleSwitcher } from './MapStyleSwitcher';
 import { SolarCellPopup } from './SolarCellPopup';
-import { TaskLabel } from './TaskLabel';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -36,106 +22,20 @@ const MapView = () => {
   const mapReadyRef = useRef(false);
   const [mapReady, setMapReady] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<string>('overview');
   const [devicePopup, setDevicePopup] = useAtom(devicePopupAtom);
 
-  const [popupInfo, setPopupInfo] = useState<{
-    lngLat: [number, number];
-    targetLngLat?: [number, number];
-    land: LandPopupData;
-  } | null>(null);
   const setMapInstance = useSetAtom(mapInstanceAtom);
   const selectLand = useSetAtom(selectLandAtom);
-
-  const activeTabRef = useRef(activeTab);
-  useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
+  const setClickedPolygonLandId = useSetAtom(clickedPolygonLandIdAtom);
 
   const isPolygonEditMode = useAtomValue(isPolygonEditModeAtom);
   const isPolygonEditModeRef = useRef(isPolygonEditMode);
-  const triggerSelectLand = useAtomValue(triggerSelectLandAtom);
-  const setTriggerSelectLand = useSetAtom(triggerSelectLandAtom);
-
-  const { data: dbLands } = useLandsQuery();
-  const { data: dbTasks } = useTasksQuery();
-  const { data: dbTilesets } = useTilesetsQuery();
-
-  const taskCountByLand = useMemo<Map<string, number>>(() => {
-    const map = new Map<string, number>();
-    if (!dbTasks) return map;
-    for (const t of dbTasks) {
-      if (!t.land_id || t.status === 'completed' || t.status === 'cancelled')
-        continue;
-      map.set(t.land_id, (map.get(t.land_id) ?? 0) + 1);
-    }
-    return map;
-  }, [dbTasks]);
-  const [land, setLand] = useState<LandData[]>([]);
-  const landRef = useRef<LandData[]>([]);
-
-  useEffect(() => {
-    if (!dbLands) return;
-    const mapped = dbLands.map((l) => toLandData(l));
-    setLand(mapped);
-  }, [dbLands]);
-
-  useEffect(() => {
-    landRef.current = land;
-  }, [land]);
-
-  const [previousViewState, setPreviousViewState] = useState<{
-    center: mapboxgl.LngLat;
-    zoom: number;
-  } | null>(null);
-  const nextLandId = useRef(1);
 
   useEffect(() => {
     isPolygonEditModeRef.current = isPolygonEditMode;
   }, [isPolygonEditMode]);
 
-  const applyLandSelection = useCallback(
-    (landData: LandPopupData, mapInstance: mapboxgl.Map) => {
-      const bounds = new mapboxgl.LngLatBounds();
-      landData.coords.forEach((coord: [number, number]) =>
-        bounds.extend(coord),
-      );
-
-      const coords = landData.coords as [number, number][];
-      const maxLng = Math.max(...coords.map((c) => c[0]));
-      const pointsAtMaxLng = coords.filter((c) => c[0] === maxLng);
-      const avgLat =
-        pointsAtMaxLng.reduce((sum, p) => sum + p[1], 0) /
-        pointsAtMaxLng.length;
-
-      setPreviousViewState(
-        (prev) =>
-          prev || {
-            center: mapInstance.getCenter(),
-            zoom: mapInstance.getZoom(),
-          },
-      );
-
-      setPopupInfo({
-        lngLat: [maxLng, bounds.getCenter().lat],
-        targetLngLat: [maxLng, avgLat],
-        land: landData,
-      });
-      selectLand(landData as Parameters<typeof selectLand>[0]);
-
-      mapInstance.fitBounds(bounds, {
-        padding: { top: 50, bottom: 50, left: 400, right: 400 },
-        duration: 500,
-        essential: true,
-      });
-    },
-    [selectLand],
-  );
-
-  const applyLandSelectionRef = useRef(applyLandSelection);
-  useEffect(() => {
-    applyLandSelectionRef.current = applyLandSelection;
-  }, [applyLandSelection]);
+  const { data: dbTilesets } = useTilesetsQuery();
 
   useEffect(() => {
     mapboxgl.accessToken = ACCESS_TOKEN;
@@ -177,11 +77,6 @@ const MapView = () => {
       m.on('click', (e) => {
         if (isPolygonEditModeRef.current) return;
 
-        if (activeTabRef.current !== 'overview') {
-          setDevicePopup(null);
-          return;
-        }
-
         const features = m.queryRenderedFeatures(e.point);
         const feature = features?.find((f) =>
           f.layer?.id?.includes('gl-draw-polygon-fill'),
@@ -190,16 +85,12 @@ const MapView = () => {
         if (feature) {
           const landId = String(
             feature.properties?.landId ??
-              feature.properties?.user_landId ??
-              feature.id ??
-              '',
+            feature.properties?.user_landId ??
+            feature.id ??
+            '',
           );
-          const landData = landRef.current.find((l) => l.id === landId);
-          if (landData) {
-            applyLandSelectionRef.current(landData, m);
-          }
+          if (landId) setClickedPolygonLandId(landId);
         } else {
-          setPopupInfo(null);
           setDevicePopup(null);
           selectLand(null);
         }
@@ -277,94 +168,10 @@ const MapView = () => {
     addedTilesetIdsRef.current = newIds;
   }, [dbTilesets, mapReady]);
 
-  useEffect(() => {
-    if (!popupInfo && previousViewState && map.current) {
-      map.current.easeTo({
-        center: previousViewState.center,
-        zoom: previousViewState.zoom,
-        duration: 500,
-        essential: true,
-      });
-      setPreviousViewState(null);
-    }
-  }, [popupInfo, previousViewState]);
-
-  const selectedLand = useAtomValue(selectedLandAtom);
-  useEffect(() => {
-    if (!selectedLand) {
-      setPopupInfo(null);
-    }
-  }, [selectedLand]);
-
-  useEffect(() => {
-    if (!triggerSelectLand || !map.current) return;
-    applyLandSelection(triggerSelectLand, map.current);
-    setTriggerSelectLand(null);
-  }, [triggerSelectLand, applyLandSelection, setTriggerSelectLand]);
-
   return (
     <>
-      {mapReady && (
-        <MapPolygonDrawMount
-          lands={land}
-          setLands={setLand}
-          nextLandId={nextLandId}
-          popupInfo={popupInfo}
-          onClearSelection={() => {
-            setPopupInfo(null);
-            setDevicePopup(null);
-          }}
-        />
-      )}
       <div id="map-container" ref={mapContainer} />
       {mapReady && <MapStyleSwitcher />}
-      {land.map((item) => (
-        <PolygonMarker key={item.id} coords={item.coords}>
-          <TaskLabel
-            name={item.name}
-            taskCount={taskCountByLand.get(item.id) ?? 0}
-          />
-        </PolygonMarker>
-      ))}
-
-      {/* <Tabs
-        selectedKey={activeTab}
-        onSelectionChange={(key) => {
-          setActiveTab(String(key));
-          setDevicePopup(null);
-        }}
-        className="max-w-md absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-transparent p-0"
-      >
-        <Tabs.ListContainer>
-          <Tabs.List
-            aria-label="Options"
-            className="bg-transparent border border-gray-200/20 backdrop-blur-sm *:w-[110px]"
-          >
-            <Tabs.Tab id="overview" className="text-white">
-              จัดการงาน
-              <Tabs.Indicator className="bg-[#03662c]" />
-            </Tabs.Tab>
-            <Tabs.Tab id="analytics" className="text-white">
-              อุปกรณ์
-              <Tabs.Indicator className="bg-[#03662c]" />
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs.ListContainer>
-      </Tabs> */}
-      {/* <WeatherWidget /> */}
-
-      {popupInfo && map.current && (
-        <MapPopup
-          map={map.current}
-          lngLat={popupInfo.lngLat}
-          targetLngLat={popupInfo.targetLngLat}
-        >
-          <LandPopupContent
-            key={String(popupInfo.land.id)}
-            land={popupInfo.land}
-          />
-        </MapPopup>
-      )}
       {devicePopup && map.current && (
         <MapPopup map={map.current} lngLat={devicePopup.lngLat}>
           {devicePopup.type === 'camera' && devicePopup.camera && (

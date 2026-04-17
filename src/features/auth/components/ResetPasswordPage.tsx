@@ -31,7 +31,7 @@ export function ResetPasswordPage() {
     if (error) {
       setError(error.message);
     } else {
-      navigate('/farms', { replace: true });
+      navigate('/auth/login', { replace: true });
     }
   };
 

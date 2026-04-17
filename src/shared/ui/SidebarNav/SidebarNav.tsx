@@ -154,7 +154,7 @@ export function SidebarNav({
       setDirection(desired.length > currentStack.length ? 1 : -1);
       return desired;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   // ─── Height animation ────────────────────────────────────────
@@ -178,7 +178,7 @@ export function SidebarNav({
       <Column
         className={
           className ??
-          'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden'
+          'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden absolute right-0'
         }
       >
         <motion.div

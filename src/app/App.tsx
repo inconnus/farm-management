@@ -5,6 +5,7 @@ import Sidebar from '@app/layout/sidebar';
 import {
   ForgotPasswordPage,
   LoginPage,
+  OrgRequiredRoute,
   OrgSelectPage,
   ProtectedRoute,
   PublicRoute,
@@ -16,6 +17,7 @@ import DashboardScreen from '@features/dashboard/components/dashboard_screen';
 import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
 import MapView from '@features/map';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import MapLayout from './layout/map_layout';
 
 const App = () => {
   return (
@@ -50,39 +52,31 @@ const App = () => {
         }
       />
 
-      {/* Protected app routes (org required) */}
+      {/* Root redirect */}
+      <Route path="/" element={<Navigate to="/auth/login" replace />} />
+
+      {/* Protected app routes — scoped under /:orgSlug */}
       <Route
-        path="/*"
+        path="/:orgSlug/*"
         element={
           <ProtectedRoute>
-            {/* <OrgRequiredRoute> */}
-            <MainLayout>
-              <Sidebar />
-              <MapView />
-              <FarmSidebar>
+            <OrgRequiredRoute>
+              <MainLayout>
+                <Sidebar />
+                <MapView />
                 <Routes>
-                  <Route
-                    path="/"
-                    element={<Navigate to="/dashboard" replace />}
-                  />
-                  <Route path="/farms" element={<FarmsSidebar />}>
-                    <Route index element={<></>} />
-                    <Route path=":farmId" element={<></>} />
+                  <Route path="farms" element={<FarmsSidebar />}>
+                    <Route path=":farmId" />
                   </Route>
-                  <Route path="/dashboard" element={<DashboardScreen />}>
-                    <Route index element={<></>} />
-                    <Route path=":deviceId" element={<></>} />
+                  <Route path="dashboard" element={<DashboardScreen />}>
+                    <Route path=":deviceId" />
                   </Route>
-                  <Route path="/camera" element={<CameraScreen />}>
-                    <Route index element={<></>} />
-                    <Route path=":deviceId" element={<></>} />
+                  <Route path="camera" element={<CameraScreen />}>
+                    <Route path=":deviceId" />
                   </Route>
-                  {/* <Route path="/dashboard" element={<DashboardScreen />} /> */}
-                  {/* <Route path="/tasks" element={<FarmsSidebar />} /> */}
                 </Routes>
-              </FarmSidebar>
-            </MainLayout>
-            {/* </OrgRequiredRoute> */}
+              </MainLayout>
+            </OrgRequiredRoute>
           </ProtectedRoute>
         }
       />

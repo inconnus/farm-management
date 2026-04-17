@@ -2,6 +2,7 @@ import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
 import {
   type CameraData,
   CameraMarker,
+  FarmMarker,
   type SolarCellData,
   SolarCellMarker,
   toCameraData,
@@ -15,11 +16,12 @@ import * as turf from '@turf/turf';
 import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useFarmsQuery } from '../hooks/useFarmsQuery';
 import { toFarm } from '../transforms';
 import { FarmDetailPage } from './FarmDetailPage';
 import { FarmListPage } from './FarmListPage';
+import { getCentroid } from 'src/utils/map';
 
 // ─── Map helpers ─────────────────────────────────────────────────
 
@@ -46,6 +48,14 @@ function zoomToFarm(map: mapboxgl.Map, farm: ReturnType<typeof toFarm>) {
       },
     );
   }
+  else{
+    map.flyTo({
+      center: [farm.lng ?? 0, farm.lat ?? 0],
+      zoom: 15,
+      duration: 1000,
+      essential: true,
+    });
+  }
 }
 
 function flyToOverview(map: mapboxgl.Map) {
@@ -55,12 +65,13 @@ function flyToOverview(map: mapboxgl.Map) {
 // ─── Component ───────────────────────────────────────────────────
 
 export const FarmsSidebar = () => {
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const mapInstance = useAtomValue(mapInstanceAtom);
   const selectFarm = useSetAtom(selectFarmAtom);
   const selectLand = useSetAtom(selectLandAtom);
   const setDevicePopup = useSetAtom(devicePopupAtom);
-  const { farmId } = useParams();
+  const { farmId, orgSlug } = useParams<{ farmId?: string; orgSlug?: string }>();
 
   // ─── Data ────────────────────────────────────────────────────
 
@@ -81,6 +92,8 @@ export const FarmsSidebar = () => {
 
   const { data: dbFarms = [], isLoading } = useFarmsQuery();
   const farms = useMemo(() => dbFarms.map(toFarm), [dbFarms]);
+
+
 
   const filteredFarms = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -175,8 +188,38 @@ export const FarmsSidebar = () => {
 
   // ─── Render ──────────────────────────────────────────────────
 
+  const basePath = `/${orgSlug}/farms`;
+
   return (
-    <SidebarNav basePath="/farms" pages={pages}>
+    <SidebarNav basePath={basePath} pages={pages}>
+      {!farmId && farms.map((farm) => {
+        const { lat, lng } = getCentroid(farm) ;
+        return (
+          <FarmMarker
+            key={farm.id}
+            farm={{
+              id: farm.id,
+              name: farm.name,
+              image: farm.image,
+              lands: farm.lands,
+              lat,
+              lng,
+            }}
+            onClick={() => {
+              if (farm) {
+                selectFarm({
+                  id: farm.id,
+                  name: farm.name,
+                  province: farm.province,
+                });
+                if (mapInstance) zoomToFarm(mapInstance, farm);
+              }
+              navigate(`${basePath}/${farm.id}`);
+              // nav.push(id);
+            }}
+          />
+        )
+      })}
       {farmId &&
         cameras.map((c) => (
           <CameraMarker

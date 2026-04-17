@@ -33,6 +33,8 @@ export function FarmMarkerFace({ item: farm, onClick }: FarmMarkerFaceProps) {
         <FarmSatelliteImage
           lands={farm.lands}
           fallbackSrc={farm.image}
+          lat={farm.lat}
+          lng={farm.lng}
           width={48}
           height={48}
           padding={15}

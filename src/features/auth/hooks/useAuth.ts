@@ -1,4 +1,3 @@
-import { clearCurrentOrgAtom } from '@store/orgStore';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useCallback } from 'react';
 import * as authApi from '../api';
@@ -18,12 +17,10 @@ export function useAuth() {
   const isLoading = useAtomValue(isAuthLoadingAtom);
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
   const setAuth = useSetAtom(authAtom);
-  const clearOrg = useSetAtom(clearCurrentOrgAtom);
 
   const signOut = useCallback(async () => {
-    clearOrg();
     return authApi.signOut();
-  }, [clearOrg]);
+  }, []);
 
   const updateProfile = useCallback(
     async (updates: {

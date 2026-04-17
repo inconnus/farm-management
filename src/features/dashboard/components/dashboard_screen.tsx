@@ -64,7 +64,7 @@ const DashboardScreen = () => {
     return map;
   }, [telemetryQueries]);
 
-  const { deviceId } = useParams();
+  const { deviceId, orgSlug } = useParams();
   const map = useAtomValue(mapInstanceAtom);
   const navigate = useNavigate();
   const [closePopupSignal, setClosePopupSignal] = useState(0);
@@ -225,8 +225,8 @@ const DashboardScreen = () => {
                   <React.Fragment key={device._id}>
                     <div
                       className={`rounded-xl px-3 py-2.5 cursor-pointer transition-colors ${deviceId === device._id
-                          ? 'bg-[#03662c]/10 '
-                          : 'hover:bg-black/5'
+                        ? 'bg-[#03662c]/10 '
+                        : 'hover:bg-black/5'
                         }`}
                       onClick={() => {
                         if (deviceId === device._id) {
@@ -235,7 +235,7 @@ const DashboardScreen = () => {
                             signal: p.signal + 1,
                           }));
                         } else {
-                          navigate(`/dashboard/${device._id}`);
+                          navigate(`/${orgSlug}/dashboard/${device._id}`);
                         }
                       }}
                     >
@@ -326,157 +326,159 @@ const DashboardScreen = () => {
   // ─── Render ──────────────────────────────────────────────────
 
   return (
-    <SidebarNav
-      basePath="/dashboard"
-      pages={pages}
-      className="pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
-    >
-      {/* Map markers */}
-      {filteredDevices?.map((device) => {
-        const telemetry = telemetryMap.get(device.appIotId) || device.telemetry;
-        return (
-          <MapMarkerMount
-            key={device._id}
-            lat={device.lat}
-            lng={device.lon}
-            closePopupSignal={closePopupSignal}
-            openPopupSignal={
-              openPopupIdSignal.id === device._id ? openPopupIdSignal.signal : 0
-            }
-            popup={
-              <div className="p-3.5 bg-white text-gray-800 min-w-[240px] rounded-xl shadow-lg relative font-sans border border-gray-100">
-                <div className="mb-3 pr-6 text-left">
-                  <h3 className="font-bold tracking-wide uppercase text-xs">
-                    {device.appIotName || 'Unknown Device'}
-                  </h3>
+    <>
+      <SidebarNav
+        basePath={`/${orgSlug}/dashboard`}
+        pages={pages}
+        className="absolute right-0 pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
+      >
+        {/* Map markers */}
+        {filteredDevices?.map((device) => {
+          const telemetry = telemetryMap.get(device.appIotId) || device.telemetry;
+          return (
+            <MapMarkerMount
+              key={device._id}
+              lat={device.lat}
+              lng={device.lon}
+              closePopupSignal={closePopupSignal}
+              openPopupSignal={
+                openPopupIdSignal.id === device._id ? openPopupIdSignal.signal : 0
+              }
+              popup={
+                <div className="p-3.5 bg-white text-gray-800 min-w-[240px] rounded-xl shadow-lg relative font-sans border border-gray-100">
+                  <div className="mb-3 pr-6 text-left">
+                    <h3 className="font-bold tracking-wide uppercase text-xs">
+                      {device.appIotName || 'Unknown Device'}
+                    </h3>
+                  </div>
+
+                  <div className="flex justify-between mb-3 text-center gap-2">
+                    <div>
+                      <div className="text-xl text-[#f44336] font-medium leading-none">
+                        {telemetry?.sensor_ambient_temperature?.toFixed(1) || '-'}
+                      </div>
+                      <div className="mt-1 h-4 border-b border-gray-200">
+                        <svg width="40" height="16" viewBox="0 0 40 16">
+                          <path
+                            d="M0,8 Q10,16 20,8 T40,8"
+                            fill="none"
+                            stroke="#f44336"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
+                        TEMP °C
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl text-[#f59e0b] font-medium leading-none">
+                        {telemetry?.sensor_ambient_humid?.toFixed(1) || '-'}
+                      </div>
+                      <div className="mt-1 h-4 border-b border-gray-200">
+                        <svg width="40" height="16" viewBox="0 0 40 16">
+                          <path
+                            d="M0,12 Q10,4 20,12 T40,12"
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
+                        HUMID %
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xl text-[#0ea5e9] font-medium leading-none">
+                        {telemetry?.sensor_soil_humid_humid?.toFixed(1) || '-'}
+                      </div>
+                      <div className="mt-1 h-4 border-b border-gray-200">
+                        <svg width="40" height="16" viewBox="0 0 40 16">
+                          <path
+                            d="M0,4 Q10,12 20,4 T40,4"
+                            fill="none"
+                            stroke="#0ea5e9"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
+                        SOIL M.%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-2 text-left">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-gray-500 flex-1 text-[10px]">
+                        Sensor
+                      </span>
+                      <span className="text-gray-500 w-[35px] text-right text-[10px]">
+                        pH
+                      </span>
+                      <span className="text-gray-500 w-[35px] text-right text-[10px]">
+                        EC
+                      </span>
+                      <span className="text-gray-500 w-[35px] text-right text-[10px]">
+                        V_IN
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-900 font-medium flex-1 text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">
+                        {device.appIotId}
+                      </span>
+                      <span className="text-[#f44336] font-medium w-[35px] text-right text-[11px]">
+                        {(
+                          telemetry?.sensor_soil_humid_ph ??
+                          telemetry?.sensor_soil_humid_ph
+                        )?.toFixed(1) || '-'}
+                      </span>
+                      <span className="text-[#f59e0b] font-medium w-[35px] text-right text-[11px]">
+                        {(
+                          telemetry?.sensor_soil_humid_ec ??
+                          telemetry?.sensor_soil_humid_ec
+                        )?.toFixed(1) || '-'}
+                      </span>
+                      <span className="text-[#0ea5e9] font-medium w-[35px] text-right text-[11px]">
+                        {telemetry?.sensor_voltage_v_in?.toFixed(1) || '-'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+              }
+              onClick={() => {
+                navigate(`/${orgSlug}/dashboard/${device._id}`);
+              }}
+            >
+              <GlowingPin isOnline={!!telemetry} />
+            </MapMarkerMount>
+          );
+        })}
 
-                <div className="flex justify-between mb-3 text-center gap-2">
-                  <div>
-                    <div className="text-xl text-[#f44336] font-medium leading-none">
-                      {telemetry?.sensor_ambient_temperature?.toFixed(1) || '-'}
-                    </div>
-                    <div className="mt-1 h-4 border-b border-gray-200">
-                      <svg width="40" height="16" viewBox="0 0 40 16">
-                        <path
-                          d="M0,8 Q10,16 20,8 T40,8"
-                          fill="none"
-                          stroke="#f44336"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
-                      TEMP °C
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-xl text-[#f59e0b] font-medium leading-none">
-                      {telemetry?.sensor_ambient_humid?.toFixed(1) || '-'}
-                    </div>
-                    <div className="mt-1 h-4 border-b border-gray-200">
-                      <svg width="40" height="16" viewBox="0 0 40 16">
-                        <path
-                          d="M0,12 Q10,4 20,12 T40,12"
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
-                      HUMID %
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-xl text-[#0ea5e9] font-medium leading-none">
-                      {telemetry?.sensor_soil_humid_humid?.toFixed(1) || '-'}
-                    </div>
-                    <div className="mt-1 h-4 border-b border-gray-200">
-                      <svg width="40" height="16" viewBox="0 0 40 16">
-                        <path
-                          d="M0,4 Q10,12 20,4 T40,4"
-                          fill="none"
-                          stroke="#0ea5e9"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-gray-400 block mt-1 text-[9px] font-bold uppercase">
-                      SOIL M.%
-                    </span>
-                  </div>
-                </div>
+        {/* Polygon markers */}
+        {dashboardPolygons.map((poly) => (
+          <React.Fragment key={poly.id}>
+            <MapPolygonMount
+              id={poly.id}
+              coords={poly.coords}
+              properties={poly.properties}
+            />
+            <PolygonMarker coords={poly.coords}>
+              <TaskLabel name={poly.name} />
+            </PolygonMarker>
+          </React.Fragment>
+        ))}
 
-                <div className="border-t border-gray-200 pt-2 text-left">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-500 flex-1 text-[10px]">
-                      Sensor
-                    </span>
-                    <span className="text-gray-500 w-[35px] text-right text-[10px]">
-                      pH
-                    </span>
-                    <span className="text-gray-500 w-[35px] text-right text-[10px]">
-                      EC
-                    </span>
-                    <span className="text-gray-500 w-[35px] text-right text-[10px]">
-                      V_IN
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-gray-900 font-medium flex-1 text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">
-                      {device.appIotId}
-                    </span>
-                    <span className="text-[#f44336] font-medium w-[35px] text-right text-[11px]">
-                      {(
-                        telemetry?.sensor_soil_humid_ph ??
-                        telemetry?.sensor_soil_humid_ph
-                      )?.toFixed(1) || '-'}
-                    </span>
-                    <span className="text-[#f59e0b] font-medium w-[35px] text-right text-[11px]">
-                      {(
-                        telemetry?.sensor_soil_humid_ec ??
-                        telemetry?.sensor_soil_humid_ec
-                      )?.toFixed(1) || '-'}
-                    </span>
-                    <span className="text-[#0ea5e9] font-medium w-[35px] text-right text-[11px]">
-                      {telemetry?.sensor_voltage_v_in?.toFixed(1) || '-'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            }
-            onClick={() => {
-              navigate(`/dashboard/${device._id}`);
-            }}
-          >
-            <GlowingPin isOnline={!!telemetry} />
-          </MapMarkerMount>
-        );
-      })}
-
-      {/* Polygon markers */}
-      {dashboardPolygons.map((poly) => (
-        <React.Fragment key={poly.id}>
-          <MapPolygonMount
-            id={poly.id}
-            coords={poly.coords}
-            properties={poly.properties}
-          />
-          <PolygonMarker coords={poly.coords}>
-            <TaskLabel name={poly.name} />
-          </PolygonMarker>
-        </React.Fragment>
-      ))}
-
-      <SummaryModal
-        isOpen={isSummaryModalOpen}
-        onOpenChange={setIsSummaryModalOpen}
-        devices={iotDevices || []}
-        telemetryMap={telemetryMap}
-      />
-    </SidebarNav>
+        <SummaryModal
+          isOpen={isSummaryModalOpen}
+          onOpenChange={setIsSummaryModalOpen}
+          devices={iotDevices || []}
+          telemetryMap={telemetryMap}
+        />
+      </SidebarNav>
+    </>
   );
 };
 export default DashboardScreen;

@@ -3,6 +3,9 @@ import { atom } from 'jotai';
 
 export const triggerSelectLandAtom = atom<LandData | null>(null);
 
+/** Set by MapView when user clicks a polygon on the map; consumed by FarmDetailPage */
+export const clickedPolygonLandIdAtom = atom<string | null>(null);
+
 // ─── Types ───────────────────────────────────────────────────────
 
 export type SelectedFarm = {

@@ -10,6 +10,8 @@ export type Farm = {
   plotCount: number;
   image: string;
   lands: LandData[];
+  lat: number | null;
+  lng: number | null;
 };
 
 export function toLandData(
@@ -41,5 +43,7 @@ export function toFarm(db: DbFarmWithLands): Farm {
     plotCount: db.lands.length,
     image: db.image_url ?? '',
     lands: db.lands.map((l) => toLandData(l, province)),
+    lat: db.lat ?? null,
+    lng: db.lng ?? null,
   };
 }

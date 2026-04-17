@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticatedAtom, isAuthInitializedAtom } from '../store';
 
 type PublicRouteProps = {
@@ -9,6 +9,7 @@ type PublicRouteProps = {
 export function PublicRoute({ children }: PublicRouteProps) {
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
   const isInitialized = useAtomValue(isAuthInitializedAtom);
+  const location = useLocation();
 
   if (!isInitialized) {
     return (
@@ -37,8 +38,10 @@ export function PublicRoute({ children }: PublicRouteProps) {
     );
   }
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+  // ถ้าอยู่ที่ /auth/login ให้ LoginPage จัดการ flow เอง
+  // ไม่ redirect ออก เพราะ LoginPage จะ navigate ไปเองหลังเลือก org
+  if (isAuthenticated && location.pathname !== '/auth/login') {
+    return <Navigate to="/org/select" replace />;
   }
 
   return <>{children}</>;

@@ -36,6 +36,63 @@ export type FarmMembersData = {
   unassigned: TeamMember[];
 };
 
+// ─── Mutations ───────────────────────────────────────────
+
+export type CreateFarmInput = {
+  name: string;
+  organizationId: string;
+  lat: number;
+  lng: number;
+  province?: string;
+};
+
+export type CreateLandInput = {
+  farmId: string;
+  name: string;
+  cropType?: string;
+  color?: string;
+  coords: [number, number][];
+};
+
+export async function createLand(input: CreateLandInput): Promise<DbLand> {
+  const geometryJson = {
+    type: 'Polygon',
+    coordinates: [input.coords],
+  };
+
+  const { data, error } = await supabase
+    .from('lands')
+    .insert({
+      farm_id: input.farmId,
+      name: input.name,
+      crop_type: input.cropType ?? null,
+      color: input.color ?? '#22c55e',
+      geometry_json: geometryJson,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createFarm(input: CreateFarmInput): Promise<DbFarm> {
+  const { data, error } = await supabase
+    .from('farms')
+    .insert({
+      name: input.name,
+      organization_id: input.organizationId,
+      lat: input.lat,
+      lng: input.lng,
+      province: input.province ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // ─── Queries ─────────────────────────────────────────────
 
 export async function fetchFarms(
@@ -45,7 +102,7 @@ export async function fetchFarms(
     .from('farms')
     .select(`
       id, name, province, image_url, description, total_area, area_unit,
-      created_at, updated_at, organization_id, created_by,
+      lat, lng, created_at, updated_at, organization_id, created_by,
       lands ( id, name, crop_type, color, geometry_json, image_url, status, area, area_unit )
     `)
     .eq('organization_id', organizationId)

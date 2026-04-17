@@ -14,7 +14,7 @@ import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
 const CameraScreen = () => {
     // Get unique appFarmIds from iotDevices to fetch their land data
 
-    const { deviceId } = useParams();
+    const { deviceId, orgSlug } = useParams();
     const map = useAtomValue(mapInstanceAtom);
     const navigate = useNavigate();
     const [closePopupSignal, setClosePopupSignal] = useState(0);
@@ -124,10 +124,9 @@ const CameraScreen = () => {
                                         return (
                                             <div className="pb-1">
                                                 <div
-                                                    className={`rounded-xl px-3 py-2.5 cursor-pointer transition-colors ${
-                                                        isSelected ? 'bg-[#03662c]/10' : 'hover:bg-black/5'
-                                                    }`}
-                                                    onClick={() => navigate(`/camera/${device.id}`)}
+                                                    className={`rounded-xl px-3 py-2.5 cursor-pointer transition-colors ${isSelected ? 'bg-[#03662c]/10' : 'hover:bg-black/5'
+                                                        }`}
+                                                    onClick={() => navigate(`/${orgSlug}/camera/${device.id}`)}
                                                 >
                                                     {/* Row 1: status dot + name */}
                                                     <div className="flex items-center gap-2 mb-1">
@@ -191,12 +190,15 @@ const CameraScreen = () => {
         const layerId = 'camera-layer';
         const iconId = 'camera-custom-icon';
 
+        let listenersAdded = false;
+
         const handleLayerClick = (e: any) => {
+
             const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
             if (features.length > 0) {
                 const id = features[0].properties?.id;
                 if (id) {
-                    navigate(`/camera/${id}`);
+                    navigate(`/${orgSlug}/camera/${id}`);
                 }
             }
         };
@@ -211,6 +213,7 @@ const CameraScreen = () => {
 
         const addLayer = () => {
             if (!map || !map.isStyleLoaded() || map.getLayer(layerId)) return;
+            listenersAdded = false; // reset when layer is re-added
 
             const geojson = {
                 type: 'FeatureCollection',
@@ -264,9 +267,12 @@ const CameraScreen = () => {
                 },
             }, labelLayerId);
 
-            map.on('click', layerId, handleLayerClick);
-            map.on('mouseenter', layerId, handleMouseEnter);
-            map.on('mouseleave', layerId, handleMouseLeave);
+            if (!listenersAdded) {
+                listenersAdded = true;
+                map.on('click', layerId, handleLayerClick);
+                map.on('mouseenter', layerId, handleMouseEnter);
+                map.on('mouseleave', layerId, handleMouseLeave);
+            }
         };
 
         const setup = () => {
@@ -298,7 +304,7 @@ const CameraScreen = () => {
             if (map) {
                 map.off('style.load', setup);
                 map.off('idle', setup);
-                if (map.getLayer(layerId)) {
+                if (map?.getLayer(layerId)) {
                     map.off('click', layerId, handleLayerClick);
                     map.off('mouseenter', layerId, handleMouseEnter);
                     map.off('mouseleave', layerId, handleMouseLeave);
@@ -312,7 +318,7 @@ const CameraScreen = () => {
                 }
             }
         };
-    }, [map, navigate]);
+    }, [map]);
 
     // ─── Render ──────────────────────────────────────────────────
 
@@ -324,9 +330,9 @@ const CameraScreen = () => {
 
     return (
         <SidebarNav
-            basePath="/camera"
+            basePath={`/${orgSlug}/camera`}
             pages={pages}
-            className="pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
+            className="absolute right-0 pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
         >
             {/* Show popup for the selected camera only */}
             {selectedCamera && (

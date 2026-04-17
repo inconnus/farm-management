@@ -1,6 +1,5 @@
 import { supabase } from '@lib/supabase/client';
-import { getPersistedOrgId, setCurrentOrgAtom } from '@store/orgStore';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { type ReactNode, useEffect } from 'react';
 import { fetchProfile } from '../api';
 import { fetchUserOrganizations } from '../orgApi';
@@ -12,21 +11,26 @@ type AuthProviderProps = {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [auth, setAuth] = useAtom(authAtom);
-  const setCurrentOrg = useSetAtom(setCurrentOrgAtom);
 
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuth((prev) => ({
-        user: session?.user ?? null,
-        session: session ?? null,
-        profile: session?.user?.id === prev.user?.id ? prev.profile : null,
-        organizations:
-          session?.user?.id === prev.user?.id ? prev.organizations : [],
-        isLoading: false,
-        isInitialized: true,
-      }));
+      setAuth((prev) => {
+        const sameUser = session?.user?.id === prev.user?.id;
+        return {
+          user: session?.user ?? null,
+          session: session ?? null,
+          profile: sameUser ? prev.profile : null,
+          organizations: sameUser ? prev.organizations : [],
+          isLoading: false,
+          isInitialized: true,
+          // ถ้าไม่มี user → ready ทันที
+          // ถ้า user คนเดิม → คงค่าเดิมไว้ (เช่น tab focus / token refresh)
+          // ถ้า user ใหม่ → reset รอ fetch
+          isProfileReady: !session?.user ? true : sameUser ? prev.isProfileReady : false,
+        };
+      });
     });
 
     return () => subscription.unsubscribe();
@@ -41,20 +45,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     Promise.all([fetchProfile(userId), fetchUserOrganizations(userId)]).then(
       ([profile, organizations]) => {
         if (cancelled) return;
-        setAuth((prev) => ({ ...prev, profile, organizations }));
-
-        const persistedOrgId = getPersistedOrgId();
-        if (persistedOrgId) {
-          const match = organizations.find((o) => o.id === persistedOrgId);
-          if (match) setCurrentOrg(match);
-        }
+        setAuth((prev) => ({ ...prev, profile, organizations, isProfileReady: true }));
       },
     );
 
     return () => {
       cancelled = true;
     };
-  }, [auth.user?.id, setAuth, setCurrentOrg]);
+  }, [auth.user?.id, setAuth]);
 
   return <>{children}</>;
 }

@@ -1,5 +1,4 @@
-import { userAtom } from '@features/auth/store';
-import { House } from '@gravity-ui/icons';
+import { organizationsAtom, userAtom } from '@features/auth/store';
 import {
   Avatar,
   Button,
@@ -10,18 +9,18 @@ import {
   Skeleton,
 } from '@heroui/react';
 import { supabase } from '@shared/lib/supabase/client';
-import { currentOrgAtom } from '@shared/store/orgStore';
 import { useAtomValue } from 'jotai';
 import {
-  CameraIcon,
   CctvIcon,
+  GlobeIcon,
   HomeIcon,
   LandPlotIcon,
   LogOutIcon,
   SettingsIcon,
+  UserIcon,
 } from 'lucide-react';
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Column, Padding, Row, Spacer } from '.';
 import { mapInstanceAtom } from '@shared/store/mapStore';
 import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
@@ -29,11 +28,17 @@ import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { orgSlug } = useParams<{ orgSlug: string }>();
   const user = useAtomValue(userAtom);
-  const currentOrg = useAtomValue(currentOrgAtom);
+  const organizations = useAtomValue(organizationsAtom);
   const map = useAtomValue(mapInstanceAtom);
+
+  // Derive current org from URL slug
+  const currentOrg = organizations.find((o) => o.slug === orgSlug) ?? null;
+
+  const base = `/${orgSlug}`;
   const activePath =
-    ['/dashboard', '/farms', '/camera'].find((path) =>
+    [`${base}/dashboard`, `${base}/farms`, `${base}/camera`].find((path) =>
       location.pathname.startsWith(path),
     ) || location.pathname;
 
@@ -64,38 +69,58 @@ const Sidebar = () => {
           </Column>
         </Row>
         <Separator className="my-1" />
+        <Row className='justify-between items-center'>
+          <span className='text-xs text-gray-500'>สาธารณะ</span>
+          <GlobeIcon className='size-3 text-gray-400' />
+        </Row>
         <ListBox
-          aria-label="Users"
+          aria-label="Navigation"
           className="w-[200px]"
           selectionMode="none"
           onAction={(key) => {
             map?.flyTo(DEFAULT_MAP_OVERVIEW);
-            return navigate(key as string)
+            return navigate(`${base}/${key}`);
           }}
         >
           <ListBox.Item
-            id="/dashboard"
-            textValue="Bob"
-            className={`hover:bg-black/5 px-2 ${activePath === '/dashboard' ? 'bg-black/5' : ''}`}
+            id="dashboard"
+            textValue="แดชบอร์ด"
+            className={`hover:bg-black/5 px-2 ${activePath === `${base}/dashboard` ? 'bg-black/5' : ''}`}
           >
             <HomeIcon className="size-4 " />
             <span>แดชบอร์ด</span>
           </ListBox.Item>
+
           <ListBox.Item
-            id="/farms"
-            textValue="Bob"
-            className={`hover:bg-black/5 px-2 ${activePath === '/farms' ? 'bg-black/5' : ''}`}
-          >
-            <LandPlotIcon className="size-4" />
-            <span>ฟาร์ม</span>
-          </ListBox.Item>
-          <ListBox.Item
-            id="/camera"
-            textValue="Bob"
-            className={`hover:bg-black/5 px-2 ${activePath === '/camera' ? 'bg-black/5' : ''}`}
+            id="camera"
+            textValue="กล้องจราจร"
+            className={`hover:bg-black/5 px-2 ${activePath === `${base}/camera` ? 'bg-black/5' : ''}`}
           >
             <CctvIcon className="size-4" />
             <span>กล้องจราจร</span>
+          </ListBox.Item>
+        </ListBox>
+        <Row className='justify-between items-center'>
+          <span className='text-xs text-gray-500'>ส่วนตัว</span>
+          <UserIcon className='size-3 text-gray-400' />
+        </Row>
+        <ListBox
+          aria-label="Navigation"
+          className="w-[200px]"
+          selectionMode="none"
+          onAction={(key) => {
+            map?.flyTo(DEFAULT_MAP_OVERVIEW);
+            return navigate(`${base}/${key}`);
+          }}
+        >
+
+          <ListBox.Item
+            id="farms"
+            textValue="ฟาร์ม"
+            className={`hover:bg-black/5 px-2 ${activePath === `${base}/farms` ? 'bg-black/5' : ''}`}
+          >
+            <LandPlotIcon className="size-4" />
+            <span>ฟาร์ม</span>
           </ListBox.Item>
         </ListBox>
         <Separator className="my-1" />
@@ -131,14 +156,14 @@ const Sidebar = () => {
           className="w-full justify-start hover:bg-black/5"
           onPress={() => {
             supabase.auth.signOut();
-            navigate('/login');
+            navigate('/auth/login');
           }}
         >
           <LogOutIcon className="size-4" />
           <span>ออกจากระบบ</span>
         </Button>
       </div>
-    </Padding>
+    </Padding >
   );
 };
 

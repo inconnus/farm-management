@@ -12,6 +12,8 @@ export type AuthState = {
   organizations: OrgMembership[];
   isLoading: boolean;
   isInitialized: boolean;
+  /** true เมื่อ fetch profile + orgs เสร็จแล้ว (หรือ user เป็น null) */
+  isProfileReady: boolean;
 };
 
 export const authAtom = atom<AuthState>({
@@ -21,6 +23,7 @@ export const authAtom = atom<AuthState>({
   organizations: [],
   isLoading: true,
   isInitialized: false,
+  isProfileReady: false,
 });
 
 export const userAtom = atom((get) => get(authAtom).user);
@@ -30,3 +33,4 @@ export const organizationsAtom = atom((get) => get(authAtom).organizations);
 export const isAuthLoadingAtom = atom((get) => get(authAtom).isLoading);
 export const isAuthenticatedAtom = atom((get) => get(authAtom).user !== null);
 export const isAuthInitializedAtom = atom((get) => get(authAtom).isInitialized);
+export const isProfileReadyAtom = atom((get) => get(authAtom).isProfileReady);

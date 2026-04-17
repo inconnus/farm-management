@@ -5,6 +5,13 @@ import { pluginReact } from '@rsbuild/plugin-react';
 // Docs: https://rsbuild.rs/config/
 export default defineConfig({
   plugins: [pluginReact()],
+  tools: {
+    // Prevent css-loader from trying to bundle /images/... absolute URLs.
+    // They are served directly from the public/ folder at runtime.
+    cssLoader: {
+      url: false,
+    },
+  },
   html: {
     title: 'Agriculture',
     favicon: './public/images/icon.png',

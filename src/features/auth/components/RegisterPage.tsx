@@ -36,7 +36,7 @@ export function RegisterPage() {
     } else if (data.user && !data.session) {
       setSuccess(true);
     } else {
-      navigate('/farms', { replace: true });
+      navigate('/org/select', { replace: true });
     }
   };
 

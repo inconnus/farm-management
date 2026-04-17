@@ -144,21 +144,7 @@ export function MapPolygonDrawMount({
     map.on('draw.delete', onDrawDelete);
     map.on('mousedown', onMousedown);
 
-    // Initial lands
-    if (lands.length > 0) {
-      lands.forEach((l) => {
-        if (l.coords.length < 3) return;
-        if (!draw.get(l.id)) {
-          draw.add({
-            id: l.id,
-            type: 'Feature',
-            properties: { color: l.color, landId: l.id },
-            geometry: { type: 'Polygon', coordinates: [l.coords] },
-          });
-        }
-      });
-      addedLandsRef.current = true;
-    }
+    // Initial lands — handled by the lands-sync effect below
 
     return () => {
       map.off('draw.create', onDrawCreate);
@@ -175,13 +161,14 @@ export function MapPolygonDrawMount({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
-  const addedLandsRef = useRef(false);
+  // Sync lands → draw: add any land that isn't already in the draw instance.
+  // Runs whenever `lands` changes (initial load OR after a new land is saved to Supabase).
   useEffect(() => {
     const draw = drawRef.current;
-    if (!draw || lands.length === 0 || addedLandsRef.current) return;
+    if (!draw) return;
 
-    lands.forEach((l) => {
-      if (l.coords.length < 3) return;
+    for (const l of lands) {
+      if (l.coords.length < 3) continue;
       if (!draw.get(l.id)) {
         draw.add({
           id: l.id,
@@ -190,8 +177,7 @@ export function MapPolygonDrawMount({
           geometry: { type: 'Polygon', coordinates: [l.coords] },
         });
       }
-    });
-    addedLandsRef.current = true;
+    }
   }, [lands]);
 
   useEffect(() => {

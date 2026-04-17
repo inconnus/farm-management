@@ -134,6 +134,8 @@ export type Database = {
           description: string | null;
           id: string;
           image_url: string | null;
+          lat: number | null;
+          lng: number | null;
           name: string;
           organization_id: string;
           province: string | null;
@@ -147,6 +149,8 @@ export type Database = {
           description?: string | null;
           id?: string;
           image_url?: string | null;
+          lat?: number | null;
+          lng?: number | null;
           name: string;
           organization_id: string;
           province?: string | null;
@@ -160,6 +164,8 @@ export type Database = {
           description?: string | null;
           id?: string;
           image_url?: string | null;
+          lat?: number | null;
+          lng?: number | null;
           name?: string;
           organization_id?: string;
           province?: string | null;
