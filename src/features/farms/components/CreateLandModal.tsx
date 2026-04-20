@@ -33,6 +33,14 @@ export type CreateLandFormData = {
   color: string;
 };
 
+export type LandInitialValues = {
+  name: string;
+  cropType: string;
+  color: string;
+  /** พิกัด polygon เดิม (สำหรับ edit mode) */
+  coords?: [number, number][];
+};
+
 type Props = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -40,6 +48,8 @@ type Props = {
   onSubmit?: (data: CreateLandFormData) => void;
   isSubmitting?: boolean;
   error?: string | null;
+  /** เมื่อส่ง initialValues จะเข้าสู่ "edit mode" (prefill + โหลด polygon เดิม) */
+  initialValues?: LandInitialValues;
 };
 
 // ─── Draw styles — color driven by user_color feature property ────────────────
@@ -95,8 +105,10 @@ export const CreateLandModal = ({
   onSubmit,
   isSubmitting = false,
   error = null,
+  initialValues,
 }: Props) => {
   const mainMap = useAtomValue(mapInstanceAtom);
+  const isEditMode = !!initialValues;
 
   const [landName, setLandName] = useState('');
   const [cropType, setCropType] = useState('');
@@ -110,12 +122,11 @@ export const CreateLandModal = ({
   const colorRef = useRef<Color>(color);
   const drawnFeatureIdRef = useRef<string | null>(null);
 
-  // Keep colorRef in sync so event handlers always see the latest color
   useEffect(() => {
     colorRef.current = color;
   }, [color]);
 
-  // Reset form state whenever the modal closes (from outside or handleClose)
+  // ── Pre-fill / reset on open ───────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) {
       setLandName('');
@@ -124,11 +135,24 @@ export const CreateLandModal = ({
       drawnFeatureIdRef.current = null;
       setColor(parseColor(LAND_COLORS[0]));
       setIsDrawing(true);
+      return;
     }
-  }, [isOpen]);
+    if (initialValues) {
+      setLandName(initialValues.name);
+      setCropType(initialValues.cropType);
+      try {
+        setColor(parseColor(initialValues.color));
+      } catch {
+        setColor(parseColor(LAND_COLORS[0]));
+      }
+      if (initialValues.coords && initialValues.coords.length >= 3) {
+        setDrawnCoords(initialValues.coords);
+        setIsDrawing(false);
+      }
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Map init ──────────────────────────────────────────────────────────────
-
+  // ── Map init ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
 
@@ -137,16 +161,28 @@ export const CreateLandModal = ({
 
       mapboxgl.accessToken = ACCESS_TOKEN;
 
-      const mainCenter = mainMap?.getCenter();
-      const mainZoom = mainMap?.getZoom();
-
-      const center: [number, number] = mainCenter
-        ? [mainCenter.lng, mainCenter.lat]
-        : farmCenter
-          ? [farmCenter.lng, farmCenter.lat]
-          : [100.9925, 15.87];
-
-      const zoom = mainZoom ?? (farmCenter ? 14 : 6);
+      // Determine initial center/zoom
+      let center: [number, number];
+      let zoom: number;
+      const existingCoords = initialValues?.coords;
+      if (isEditMode && existingCoords && existingCoords.length >= 3) {
+        const lngs = existingCoords.map((c) => c[0]);
+        const lats = existingCoords.map((c) => c[1]);
+        center = [
+          (Math.min(...lngs) + Math.max(...lngs)) / 2,
+          (Math.min(...lats) + Math.max(...lats)) / 2,
+        ];
+        zoom = 15;
+      } else {
+        const mainCenter = mainMap?.getCenter();
+        const mainZoom = mainMap?.getZoom();
+        center = mainCenter
+          ? [mainCenter.lng, mainCenter.lat]
+          : farmCenter
+            ? [farmCenter.lng, farmCenter.lat]
+            : [100.9925, 15.87];
+        zoom = mainZoom ?? (farmCenter ? 14 : 6);
+      }
 
       const m = new mapboxgl.Map({
         container: mapContainerRef.current,
@@ -172,31 +208,59 @@ export const CreateLandModal = ({
       drawRef.current = draw;
       mapRef.current = m;
 
-      // Auto-start drawing once the style is loaded
       m.once('style.load', () => {
-        draw.changeMode('draw_polygon');
+        if (isEditMode && existingCoords && existingCoords.length >= 3) {
+          // Load existing polygon
+          const colorHex = colorRef.current.toString('hex');
+          const feature: GeoJSON.Feature<GeoJSON.Polygon> = {
+            type: 'Feature',
+            id: 'land-edit',
+            geometry: { type: 'Polygon', coordinates: [existingCoords] },
+            properties: { user_color: colorHex },
+          };
+          const [featureId] = draw.add(feature);
+          const fid = String(featureId);
+          drawnFeatureIdRef.current = fid;
+          draw.setFeatureProperty(fid, 'color', colorHex);
+          const refreshed = draw.get(fid);
+          if (refreshed) draw.add(refreshed);
+
+          // Fit map to polygon bounds
+          const bounds = new mapboxgl.LngLatBounds();
+          for (const coord of existingCoords) bounds.extend(coord);
+          m.fitBounds(bounds, { padding: 60, duration: 500 });
+
+          // Switch to direct_select so vertices are immediately editable
+          m.once('moveend', () => {
+            try { draw.changeMode('direct_select', { featureId: fid }); } catch { /* ok */ }
+          });
+        } else {
+          draw.changeMode('draw_polygon');
+        }
       });
 
-      // draw.create fires after the polygon is completed (double-click).
-      // MapboxDraw already switches to simple_select internally — do NOT call
-      // changeMode again here or it causes a "Maximum call stack size exceeded".
+      // Capture newly drawn polygon (create mode / after "วาดใหม่")
       m.on('draw.create', (e: { features: GeoJSON.Feature[] }) => {
         const feature = e.features[0];
         if (!feature) return;
         const featureId = String(feature.id);
         drawnFeatureIdRef.current = featureId;
-
-        // Stamp the current color onto the feature.
-        // setFeatureProperty('color', …) → MapboxDraw prefixes to 'user_color'
-        // which matches the ['get', 'user_color'] expression in the draw styles.
         const hex = colorRef.current.toString('hex');
         draw.setFeatureProperty(featureId, 'color', hex);
         const refreshed = draw.get(featureId);
         if (refreshed) draw.add(refreshed);
-
         const coords = (feature.geometry as GeoJSON.Polygon).coordinates[0] as [number, number][];
         setDrawnCoords(coords);
         setIsDrawing(false);
+      });
+
+      // Capture polygon edits: vertex moves, polygon drags (edit mode)
+      m.on('draw.update', (e: { features: GeoJSON.Feature[]; action: string }) => {
+        const feature = e.features[0];
+        if (!feature) return;
+        const coords = (feature.geometry as GeoJSON.Polygon).coordinates[0] as [number, number][];
+        drawnFeatureIdRef.current = String(feature.id);
+        setDrawnCoords(coords);
       });
 
       m.on('draw.delete', () => {
@@ -220,13 +284,7 @@ export const CreateLandModal = ({
     };
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Sync selected color → map layers + completed polygon ─────────────────
-  //
-  // MapboxDraw splits every custom layer into two copies:
-  //   <id>.cold  →  inactive/completed features
-  //   <id>.hot   →  the feature currently being drawn/selected
-  // We must target both suffixes to update the active drawing line too.
-
+  // ── Sync selected color → map layers ──────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     const draw = drawRef.current;
@@ -250,7 +308,6 @@ export const CreateLandModal = ({
     setPaint('gl-draw-vertex',         'circle-stroke-color', hex);
     setPaint('gl-draw-midpoint',       'circle-color',        hex);
 
-    // Keep the completed feature's stored property in sync too
     const featureId = drawnFeatureIdRef.current;
     if (draw && featureId) {
       draw.setFeatureProperty(featureId, 'color', hex);
@@ -274,11 +331,11 @@ export const CreateLandModal = ({
   const handleClose = () => onOpenChange(false);
 
   const handleSubmit = () => {
-    if (!landName.trim() || !drawnCoords) return;
+    if (!landName.trim()) return;
     onSubmit?.({
       name: landName.trim(),
       cropType: cropType.trim(),
-      coords: drawnCoords,
+      coords: drawnCoords ?? [],
       color: color.toString('hex'),
     });
   };
@@ -295,12 +352,11 @@ export const CreateLandModal = ({
             <Modal.CloseTrigger className="hover:bg-gray-100" />
             <Modal.Header className="border-b border-gray-100">
               <Modal.Heading className="font-bold uppercase tracking-wider text-gray-800">
-                สร้างแปลงที่ดินใหม่
+                {isEditMode ? 'แก้ไขแปลงที่ดิน' : 'สร้างแปลงที่ดินใหม่'}
               </Modal.Heading>
             </Modal.Header>
 
             <Modal.Body className="pb-6 flex flex-col gap-5">
-              {/* Error banner */}
               {error && (
                 <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                   {error}
@@ -309,10 +365,7 @@ export const CreateLandModal = ({
 
               {/* Land Name */}
               <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="land-name"
-                  className="text-xs font-semibold uppercase tracking-wider text-gray-500"
-                >
+                <label htmlFor="land-name" className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   ชื่อแปลงที่ดิน <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -327,10 +380,7 @@ export const CreateLandModal = ({
 
               {/* Crop Type */}
               <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="crop-type"
-                  className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5"
-                >
+                <label htmlFor="crop-type" className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                   <Sprout size={13} />
                   พืชที่ปลูก
                 </label>
@@ -386,10 +436,15 @@ export const CreateLandModal = ({
                 <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-[320px]">
                   <div ref={mapContainerRef} className="w-full h-full" />
 
-                  {/* Instruction overlay */}
                   {isDrawing && (
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/65 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm pointer-events-none whitespace-nowrap">
                       คลิกเพื่อวางจุด — ดับเบิลคลิกเพื่อจบการวาด
+                    </div>
+                  )}
+
+                  {!isDrawing && isEditMode && drawnCoords && (
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/65 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm pointer-events-none whitespace-nowrap">
+                      ลากจุดเพื่อแก้ไขขอบเขต — ลากแปลงเพื่อย้ายตำแหน่ง
                     </div>
                   )}
 
@@ -399,14 +454,14 @@ export const CreateLandModal = ({
                       style={{ background: `${color.toString('hex')}dd` }}
                     >
                       <span className="w-2 h-2 rounded-full bg-white/80 shrink-0" />
-                      วาดแปลงเรียบร้อย ({drawnCoords.length - 1} จุด)
+                      {isEditMode && !isDrawing ? 'แก้ไขขอบเขตได้เลย' : 'วาดแปลงเรียบร้อย'}{' '}
+                      ({drawnCoords.length - 1} จุด)
                     </div>
                   )}
                 </div>
               </div>
             </Modal.Body>
 
-            {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 pb-6">
               <button
                 type="button"
@@ -427,7 +482,7 @@ export const CreateLandModal = ({
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                 )}
-                {isSubmitting ? 'กำลังสร้าง...' : 'สร้างแปลง'}
+                {isSubmitting ? 'กำลังบันทึก...' : isEditMode ? 'บันทึก' : 'สร้างแปลง'}
               </button>
             </div>
           </Modal.Dialog>

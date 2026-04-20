@@ -449,9 +449,12 @@ const TaskAssigneeDropdown = ({
 
 type LandPopupContentProps = {
   land: LandPopupData;
+  /** 'popup' (default) wraps in a Card with fixed sizing; 'sidebar' fills the parent container */
+  mode?: 'popup' | 'sidebar';
 };
 
-export const LandPopupContent = ({ land }: LandPopupContentProps) => {
+export const LandPopupContent = ({ land, mode = 'popup' }: LandPopupContentProps) => {
+  const isSidebar = mode === 'sidebar';
   const landId = String(land.id);
   const farmId = land.farmId;
 
@@ -546,36 +549,35 @@ export const LandPopupContent = ({ land }: LandPopupContentProps) => {
     [land.coords, land.color],
   );
 
-  return (
+  const content = (
     <>
-      <Card className="flex h-[80vh] max-h-[min(80vh,640px)]  w-[380px] flex-col overflow-hidden border-none rounded-3xl bg-white/85 p-0 shadow-2xl backdrop-blur-xl gap-0">
-        {mapImageUrl && (
-          <div className="relative h-[120px] w-full shrink-0 overflow-hidden">
-            <img
-              src={mapImageUrl}
-              alt={land.name}
-              className="h-full w-full object-cover"
-              loading="eager"
-            />
+      {mapImageUrl && (
+        <div className="relative h-[120px] w-full shrink-0 overflow-hidden">
+          <img
+            src={mapImageUrl}
+            alt={land.name}
+            className="h-full w-full object-cover"
+            loading="eager"
+          />
+          {!isSidebar && (
             <CloseButton
               className="absolute top-2 right-2"
-              onPress={() => {
-                // setShowMap(false);
-              }}
+              onPress={() => {}}
             />
-            <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent" />
-            <div className="absolute bottom-3 left-4 right-4">
-              <h3 className="text-sm font-bold text-white drop-shadow-md">
-                {land.name}
-              </h3>
-              {land.type && (
-                <p className="text-xs text-white/80 drop-shadow-md">
-                  {land.type}
-                </p>
-              )}
-            </div>
+          )}
+          <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent" />
+          <div className="absolute bottom-3 left-4 right-4">
+            <h3 className="text-sm font-bold text-white drop-shadow-md">
+              {land.name}
+            </h3>
+            {land.type && (
+              <p className="text-xs text-white/80 drop-shadow-md">
+                {land.type}
+              </p>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
         <Tabs
           selectedKey={taskTab}
@@ -773,8 +775,20 @@ export const LandPopupContent = ({ land }: LandPopupContentProps) => {
             </>
           )}
         </Tabs>
-      </Card>
+    </>
+  );
 
+  return (
+    <>
+      {isSidebar ? (
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {content}
+        </div>
+      ) : (
+        <Card className="flex h-[80vh] max-h-[min(80vh,640px)] w-[380px] flex-col overflow-hidden border-none rounded-3xl bg-white/85 p-0 shadow-2xl backdrop-blur-xl gap-0">
+          {content}
+        </Card>
+      )}
       <CreateTaskModal
         state={createModal}
         membersData={membersData}

@@ -13,3 +13,15 @@ export function useFarmMembersQuery(farmId: string | undefined) {
     enabled: isAuthenticated && !!farmId,
   });
 }
+
+export function useOrgMembersWithFarmTeamsQuery(
+  orgId: string | null | undefined,
+  farmId: string | undefined,
+) {
+  const isAuthenticated = useAtomValue(isAuthenticatedAtom);
+
+  return useQuery({
+    ...farmMemberQueries.byOrgAndFarm(orgId ?? '', farmId ?? ''),
+    enabled: isAuthenticated && !!orgId && !!farmId,
+  });
+}

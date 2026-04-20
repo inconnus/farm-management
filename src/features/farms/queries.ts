@@ -30,4 +30,10 @@ export const farmMemberQueries = {
       queryFn: () => farmsApi.fetchFarmMembers(farmId),
       staleTime: 1000 * 60 * 5,
     }),
+  byOrgAndFarm: (orgId: string, farmId: string) =>
+    queryOptions({
+      queryKey: ['org-members', orgId, 'farm', farmId] as const,
+      queryFn: () => farmsApi.fetchOrgMembersWithFarmTeams(orgId, farmId),
+      staleTime: 1000 * 60 * 5,
+    }),
 };

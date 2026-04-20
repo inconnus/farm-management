@@ -5,7 +5,7 @@ import { useAtomValue } from 'jotai';
 import * as tasksApi from '../api';
 import { taskQueries } from '../queries';
 
-export type { DbLandTask, DbTaskPriority, DbTaskStatus } from '../api';
+export type { DbLandTask, DbTaskPriority, DbTaskStatus, UpdateTaskInput } from '../api';
 export { advanceDbStatus } from '../api';
 
 export function useLandTasksQuery(landId: string) {
@@ -84,6 +84,46 @@ export function useUpdateTaskAssignee() {
       queryClient.invalidateQueries({
         queryKey: taskQueries.byLand(variables.landId).queryKey,
       });
+    },
+  });
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ input }: { input: tasksApi.UpdateTaskInput; landId: string; farmId?: string }) =>
+      tasksApi.updateTask(input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: taskQueries.byLand(variables.landId).queryKey,
+      });
+      if (variables.farmId) {
+        queryClient.invalidateQueries({
+          queryKey: taskQueries.byFarm(variables.farmId).queryKey,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId }: { taskId: string; landId: string; farmId?: string }) =>
+      tasksApi.deleteTask(taskId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: taskQueries.byLand(variables.landId).queryKey,
+      });
+      if (variables.farmId) {
+        queryClient.invalidateQueries({
+          queryKey: taskQueries.byFarm(variables.farmId).queryKey,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

@@ -39,9 +39,7 @@ export const CameraPopup = ({ camera, url }: CameraPopupProps) => {
   return (
     <Card className="flex w-[380px] flex-col overflow-hidden border-none rounded-3xl bg-white/85 p-0 shadow-2xl backdrop-blur-xl gap-0">
       <div className="relative  w-full shrink-0 overflow-hidden bg-gray-900 rounded-t-3xl">
-        {/* <VideoContent camera={camera} /> */}
-        <ReactPlayer src={url} autoPlay width={'100%'} height={'100%'} />
-        {/* <ReactPlayer src='https://streaming2.highwaytraffic.go.th/Phase12/PER_12_001.stream/playlist.m3u8' autoPlay width={'100%'} height={'100%'} /> */}
+        {camera.webrtcUrl ? <VideoContent camera={camera} url={url} /> : <ReactPlayer src={url} autoPlay width={'100%'} height={'100%'} />}
         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
         <div className="absolute top-3 left-4">
           <Row className="items-center gap-1.5">

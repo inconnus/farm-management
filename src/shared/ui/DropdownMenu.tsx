@@ -1,79 +1,53 @@
-import {
-  EllipsisVertical,
-  Pencil,
-  SquarePlus,
-  TrashBin,
-} from '@gravity-ui/icons';
-import {
-  Description,
-  Dropdown,
-  Header,
-  Kbd,
-  Label,
-  Separator,
-} from '@heroui/react';
+import { Dropdown, Label } from '@heroui/react';
+import { EllipsisVertical } from '@gravity-ui/icons';
 
-export function DropdownMenu() {
+export type DropdownMenuItem = {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  variant?: 'default' | 'danger';
+};
+
+type DropdownMenuProps = {
+  items: DropdownMenuItem[];
+  onAction: (id: string) => void;
+  triggerClassName?: string;
+};
+
+export function DropdownMenu({ items = [], onAction, triggerClassName }: DropdownMenuProps) {
   return (
     <Dropdown>
       <Dropdown.Trigger
         aria-label="Menu"
-        className="button button-md button--icon-only data-[focus-visible=true]:status-focused bg-transparent border-none shadow-none"
+        className={
+          triggerClassName ??
+          'button button-sm button--icon-only data-[focus-visible=true]:status-focused bg-transparent border-none shadow-none'
+        }
       >
-        <EllipsisVertical color="#3ca489" className="outline-none" />
+        <EllipsisVertical className="size-4 outline-none text-gray-400" />
       </Dropdown.Trigger>
       <Dropdown.Popover>
-        <Dropdown.Menu onAction={(key) => console.log(`Selected: ${key}`)}>
+        <Dropdown.Menu onAction={(key) => onAction(String(key))}>
           <Dropdown.Section>
-            <Header>Actions</Header>
-            <Dropdown.Item id="new-file" textValue="New file">
-              <div className="flex h-8 items-start justify-center pt-px">
-                <SquarePlus className="size-4 shrink-0 text-muted" />
-              </div>
-              <div className="flex flex-col">
-                <Label>New file</Label>
-                <Description>Create a new file</Description>
-              </div>
-              <Kbd className="ms-auto" slot="keyboard" variant="light">
-                <Kbd.Abbr keyValue="command" />
-                <Kbd.Content>N</Kbd.Content>
-              </Kbd>
-            </Dropdown.Item>
-            <Dropdown.Item id="edit-file" textValue="Edit file">
-              <div className="flex h-8 items-start justify-center pt-px">
-                <Pencil className="size-4 shrink-0 text-muted" />
-              </div>
-              <div className="flex flex-col">
-                <Label>Edit file</Label>
-                <Description>Make changes</Description>
-              </div>
-              <Kbd className="ms-auto" slot="keyboard" variant="light">
-                <Kbd.Abbr keyValue="command" />
-                <Kbd.Content>E</Kbd.Content>
-              </Kbd>
-            </Dropdown.Item>
-          </Dropdown.Section>
-          <Separator />
-          <Dropdown.Section>
-            <Header>Danger zone</Header>
-            <Dropdown.Item
-              id="delete-file"
-              textValue="Delete file"
-              variant="danger"
-            >
-              <div className="flex h-8 items-start justify-center pt-px">
-                <TrashBin className="size-4 shrink-0 text-danger" />
-              </div>
-              <div className="flex flex-col">
-                <Label>Delete file</Label>
-                <Description>Move to trash</Description>
-              </div>
-              <Kbd className="ms-auto" slot="keyboard" variant="light">
-                <Kbd.Abbr keyValue="command" />
-                <Kbd.Abbr keyValue="shift" />
-                <Kbd.Content>D</Kbd.Content>
-              </Kbd>
-            </Dropdown.Item>
+            {items.map((item) => (
+              <Dropdown.Item
+                key={item.id}
+                id={item.id}
+                textValue={item.label}
+                variant={item.variant === 'danger' ? 'danger' : undefined}
+              >
+                <div className="flex items-center gap-2">
+                  {item.icon && (
+                    <span className={item.variant === 'danger' ? 'text-danger' : 'text-muted'}>
+                      {item.icon}
+                    </span>
+                  )}
+                  <Label className={item.variant === 'danger' ? 'text-danger' : undefined}>
+                    {item.label}
+                  </Label>
+                </div>
+              </Dropdown.Item>
+            ))}
           </Dropdown.Section>
         </Dropdown.Menu>
       </Dropdown.Popover>

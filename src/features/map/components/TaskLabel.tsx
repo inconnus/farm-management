@@ -18,7 +18,7 @@ export const TaskLabel = ({ name, taskCount = 0 }: Props) => {
         <span className="text-sm stroke-black stroke-3">{name}</span>
       </Row>
       {taskCount > 0 && (
-        <Row className="items-center gap-1 rounded-full shadow-md text-[12px] text-white border bg-black/60 border-white/20 backdrop-blur-sm px-2 py-0.5 w-fit whitespace-nowrap">
+        <Row className="items-center gap-1 rounded-full shadow-md text-[12px] text-white border bg-black/40 border-white/20 backdrop-blur-sm px-2 py-0.5 w-fit whitespace-nowrap">
           <HourglassIcon size={12} color="#ffca24" />
           <span>{taskCount} งาน</span>
         </Row>

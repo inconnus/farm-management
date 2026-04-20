@@ -69,7 +69,7 @@ export async function fetchTasksByFarm(farmId: string): Promise<DbTask[]> {
     .from('tasks')
     .select(TASK_SELECT)
     .eq('farm_id', farmId)
-    .order('due_date', { ascending: true, nullsFirst: false });
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as unknown as DbTask[];
@@ -80,7 +80,7 @@ export async function fetchTasksByLand(landId: string): Promise<DbLandTask[]> {
     .from('tasks')
     .select(LAND_TASK_SELECT)
     .eq('land_id', landId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as unknown as DbLandTask[];
@@ -136,6 +136,37 @@ export async function updateTaskAssignee(
   const { error } = await supabase
     .from('tasks')
     .update({ assigned_to: assignedTo })
+    .eq('id', taskId);
+
+  if (error) throw error;
+}
+
+export type UpdateTaskInput = {
+  taskId: string;
+  title?: string;
+  description?: string | null;
+  dueDate?: string | null;
+  assignedTo?: string | null;
+};
+
+export async function updateTask(input: UpdateTaskInput) {
+  const { error } = await supabase
+    .from('tasks')
+    .update({
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.description !== undefined && { description: input.description }),
+      ...(input.dueDate !== undefined && { due_date: input.dueDate }),
+      ...(input.assignedTo !== undefined && { assigned_to: input.assignedTo }),
+    })
+    .eq('id', input.taskId);
+
+  if (error) throw error;
+}
+
+export async function deleteTask(taskId: string) {
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
     .eq('id', taskId);
 
   if (error) throw error;

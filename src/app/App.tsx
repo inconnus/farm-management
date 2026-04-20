@@ -66,7 +66,9 @@ const App = () => {
                 <MapView />
                 <Routes>
                   <Route path="farms" element={<FarmsSidebar />}>
-                    <Route path=":farmId" />
+                    <Route path=":farmId">
+                      <Route path=":landId" />
+                    </Route>
                   </Route>
                   <Route path="dashboard" element={<DashboardScreen />}>
                     <Route path=":deviceId" />

@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { SidebarNavAPI, SidebarNavProps } from './types';
 
+function trimLastSegment(pathname: string): string {
+  const parts = pathname.replace(/\/$/, '').split('/');
+  return parts.slice(0, -1).join('/') || '/';
+}
+
 // ─── Animation (iOS-style push/pop) ──────────────────────────────
 
 const IOS_EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -70,17 +75,6 @@ export function SidebarNav({
   const location = useLocation();
   const rootKey = pages[0]?.key ?? '';
 
-  // ─── Resolve page from key ───────────────────────────────────
-  const resolvePage = useCallback(
-    (key: string) => {
-      return (
-        pages.find((p) => p.key === key) ??
-        pages.find((p) => p.path.startsWith(':'))
-      );
-    },
-    [pages],
-  );
-
   // ─── Build initial stack from URL ────────────────────────────
   const [stack, setStack] = useState<string[]>(() => {
     const segs = segmentsFromURL(location.pathname, basePath);
@@ -89,7 +83,16 @@ export function SidebarNav({
   const [direction, setDirection] = useState(1);
 
   const currentKey = stack[stack.length - 1] ?? rootKey;
-  const currentPage = resolvePage(currentKey);
+  const stackDepth = stack.length - 1;
+
+  // Depth-aware page resolution: dynamic pages are matched by their order in the pages
+  // array, so the first dynamic page matches depth 1, second matches depth 2, etc.
+  const currentPage = useMemo(() => {
+    const direct = pages.find((p) => p.key === currentKey);
+    if (direct) return direct;
+    const dynamicPages = pages.filter((p) => p.path.startsWith(':'));
+    return dynamicPages[Math.max(0, stackDepth - 1)];
+  }, [pages, currentKey, stackDepth]);
 
   // ─── Navigation API ──────────────────────────────────────────
 
@@ -98,16 +101,17 @@ export function SidebarNav({
       setDirection(1);
       setStack((prev) => [...prev, pageKey]);
 
-      const page = resolvePage(pageKey);
-      if (page) {
+      const staticPage = pages.find((p) => p.key === pageKey && !p.path.startsWith(':'));
+      if (staticPage) {
         const base = basePath.replace(/\/+$/, '');
-        // If dynamic path, use the pageKey as URL segment
-        const urlSeg = page.path.startsWith(':') ? pageKey : page.path;
-        navigate(`${base}/${urlSeg}`);
+        navigate(`${base}/${staticPage.path}`);
+      } else {
+        // Dynamic segment — append to current pathname so nested routes work
+        navigate(`${location.pathname.replace(/\/$/, '')}/${pageKey}`);
       }
       onPageChange?.(pageKey, 'push');
     },
-    [basePath, navigate, onPageChange, resolvePage],
+    [basePath, navigate, location.pathname, onPageChange, pages],
   );
 
   const pop = useCallback(() => {
@@ -115,20 +119,11 @@ export function SidebarNav({
     setStack((prev) => {
       if (prev.length <= 1) return prev;
       const next = prev.slice(0, -1);
-      const parentKey = next[next.length - 1];
-      const parentPage = resolvePage(parentKey);
-      if (parentPage) {
-        const base = basePath.replace(/\/+$/, '');
-        navigate(
-          parentPage.path === '' || parentPage.path === '/'
-            ? base
-            : `${base}/${parentPage.path}`,
-        );
-      }
-      onPageChange?.(parentKey, 'pop');
+      onPageChange?.(next[next.length - 1], 'pop');
       return next;
     });
-  }, [basePath, navigate, onPageChange, resolvePage]);
+    navigate(trimLastSegment(location.pathname));
+  }, [navigate, location.pathname, onPageChange]);
 
   const api: SidebarNavAPI = useMemo(
     () => ({ push, pop, depth: stack.length - 1, currentKey }),

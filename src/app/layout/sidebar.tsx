@@ -1,4 +1,5 @@
 import { organizationsAtom, userAtom } from '@features/auth/store';
+import { SettingsModal } from '@features/settings/SettingsModal';
 import {
   Avatar,
   Button,
@@ -9,7 +10,8 @@ import {
   Skeleton,
 } from '@heroui/react';
 import { supabase } from '@shared/lib/supabase/client';
-import { useAtomValue } from 'jotai';
+import { setCurrentOrgAtom } from '@shared/store/orgStore';
+import { useAtomValue, useSetAtom } from 'jotai';
 import {
   CctvIcon,
   GlobeIcon,
@@ -19,7 +21,7 @@ import {
   SettingsIcon,
   UserIcon,
 } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Column, Padding, Row, Spacer } from '.';
 import { mapInstanceAtom } from '@shared/store/mapStore';
@@ -32,9 +34,15 @@ const Sidebar = () => {
   const user = useAtomValue(userAtom);
   const organizations = useAtomValue(organizationsAtom);
   const map = useAtomValue(mapInstanceAtom);
+  const setCurrentOrg = useSetAtom(setCurrentOrgAtom);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Derive current org from URL slug
   const currentOrg = organizations.find((o) => o.slug === orgSlug) ?? null;
+
+  useEffect(() => {
+    setCurrentOrg(currentOrg);
+  }, [currentOrg, setCurrentOrg]);
 
   const base = `/${orgSlug}`;
   const activePath =
@@ -128,10 +136,19 @@ const Sidebar = () => {
         <Button
           variant="ghost"
           className="w-full justify-start hover:bg-black/5 px-3"
+          onPress={() => setIsSettingsOpen(true)}
         >
           <SettingsIcon className="size-4" />
           <span>ตั้งค่า</span>
         </Button>
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onOpenChange={setIsSettingsOpen}
+          orgId={currentOrg?.id ?? null}
+          currentUserId={user?.id ?? null}
+          currentUserRole={currentOrg?.role ?? null}
+        />
         <Separator className="my-1" />
 
         <Row className="items-center gap-2 hover:bg-black/5 rounded-2xl cursor-pointer p-2">

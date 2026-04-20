@@ -161,22 +161,34 @@ export function MapPolygonDrawMount({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
-  // Sync lands → draw: add any land that isn't already in the draw instance.
-  // Runs whenever `lands` changes (initial load OR after a new land is saved to Supabase).
+  // Full sync lands ↔ draw whenever `lands` changes.
+  // draw.add() both inserts new features AND updates existing ones (geometry + properties).
+  // Also removes server-side lands that were deleted.
   useEffect(() => {
     const draw = drawRef.current;
     if (!draw) return;
 
+    const serverIdSet = new Set(lands.map((l) => l.id));
+
+    // Remove features whose server UUIDs are no longer in the lands list.
+    // Use UUID pattern to avoid touching temporary MapboxDraw-generated IDs.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const f of draw.getAll().features) {
+      const fid = String(f.id);
+      if (UUID_RE.test(fid) && !serverIdSet.has(fid)) {
+        draw.delete(fid);
+      }
+    }
+
+    // Add or update every land (draw.add() is idempotent: same ID → replaces geometry/props).
     for (const l of lands) {
       if (l.coords.length < 3) continue;
-      if (!draw.get(l.id)) {
-        draw.add({
-          id: l.id,
-          type: 'Feature',
-          properties: { color: l.color, landId: l.id },
-          geometry: { type: 'Polygon', coordinates: [l.coords] },
-        });
-      }
+      draw.add({
+        id: l.id,
+        type: 'Feature',
+        properties: { color: l.color, landId: l.id },
+        geometry: { type: 'Polygon', coordinates: [l.coords] },
+      });
     }
   }, [lands]);
 

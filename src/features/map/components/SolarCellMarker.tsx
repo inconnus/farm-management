@@ -70,7 +70,7 @@ export function SolarCellMarkerFace({
         <span className="text-[11px] text-white bg-black/50 backdrop-blur-sm rounded-full px-1.5 py-0.5 whitespace-nowrap border border-white/10">
           {device.name}
         </span>
-        <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5 border border-white/10">
+        {/* <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5 border border-white/10">
           <div className="w-[40px] h-[4px] rounded-full bg-white/20 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-1000"
@@ -84,7 +84,7 @@ export function SolarCellMarkerFace({
           <span className="text-[9px] text-white/80 font-mono">
             {currentPower.toFixed(1)} kW
           </span>
-        </div>
+        </div> */}
       </div>
     </button>
   );
