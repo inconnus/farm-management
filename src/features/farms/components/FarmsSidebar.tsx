@@ -108,7 +108,10 @@ export const FarmsSidebar = () => {
     const q = searchText.trim().toLowerCase();
     if (!q) return farms;
     return farms.filter(
-      (f) => f.name.toLowerCase().includes(q) || f.province.toLowerCase().includes(q),
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        f.province.toLowerCase().includes(q) ||
+        (f.district ?? '').toLowerCase().includes(q),
     );
   }, [searchText, farms]);
 

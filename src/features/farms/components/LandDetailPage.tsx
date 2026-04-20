@@ -10,9 +10,10 @@ import {
   useUpdateTask,
   useUpdateTaskStatus,
 } from '@features/tasks/hooks/useLandTasksQuery';
-import { Button, Modal, Separator } from '@heroui/react';
+import { Button, Calendar, DateField, DatePicker, Modal, Separator } from '@heroui/react';
+import { parseDate } from '@internationalized/date';
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   ChevronLeft,
   ClipboardList,
   Pencil,
@@ -197,21 +198,30 @@ const InlineAssigneePicker = ({
   );
 };
 
-// ─── CreateTaskModal ──────────────────────────────────────────────────────────
+// ─── TaskModal (create + edit) ────────────────────────────────────────────────
 
-type CreateTaskFormData = {
+type TaskFormData = {
   title: string;
   description?: string;
   dueDate?: string | null;
   assignedTo?: string | null;
 };
 
-const CreateTaskModal = ({
+type TaskModalInitial = {
+  id: string;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  assignedTo: string | null;
+};
+
+const TaskModal = ({
   isOpen,
   onOpenChange,
   membersData,
   landName,
   isPending,
+  initialValues,
   onSubmit,
 }: {
   isOpen: boolean;
@@ -219,8 +229,11 @@ const CreateTaskModal = ({
   membersData: FarmMembersData | undefined;
   landName: string;
   isPending?: boolean;
-  onSubmit: (data: CreateTaskFormData) => void;
+  initialValues?: TaskModalInitial;
+  onSubmit: (data: TaskFormData) => void;
 }) => {
+  const isEditMode = !!initialValues;
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -229,12 +242,19 @@ const CreateTaskModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-    setAssignee({ kind: 'none' });
+    if (initialValues) {
+      setTitle(initialValues.title);
+      setDescription(initialValues.description ?? '');
+      setDueDate(initialValues.dueDate ?? '');
+      setAssignee(assignedToToSelection(initialValues.assignedTo, membersData));
+    } else {
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+      setAssignee({ kind: 'none' });
+    }
     setTitleError(false);
-  }, [isOpen]);
+  }, [isOpen, initialValues, membersData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => onOpenChange(false);
 
@@ -250,8 +270,6 @@ const CreateTaskModal = ({
     });
   };
 
-  const isValid = title.trim().length > 0;
-
   return (
     <Modal>
       <Modal.Backdrop isOpen={isOpen} onOpenChange={handleClose}>
@@ -261,7 +279,7 @@ const CreateTaskModal = ({
             <Modal.Header className="border-b border-gray-100">
               <div className="flex flex-col gap-0.5">
                 <Modal.Heading className="font-bold uppercase tracking-wider text-gray-800">
-                  สร้างงานใหม่
+                  {isEditMode ? 'แก้ไขงาน' : 'สร้างงานใหม่'}
                 </Modal.Heading>
                 <p className="text-xs text-gray-400">{landName}</p>
               </div>
@@ -300,12 +318,37 @@ const CreateTaskModal = ({
                 <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   กำหนดเสร็จ
                 </label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none focus:border-[#03662c] focus:bg-white transition-all"
-                />
+                <DatePicker
+                  value={dueDate ? parseDate(dueDate) : null}
+                  onChange={(date) => setDueDate(date ? date.toString() : '')}
+                  className="w-full"
+                >
+                  <DateField.Group fullWidth className="rounded-xl border border-gray-200 bg-gray-50 focus-within:border-[#03662c] focus-within:bg-white transition-all">
+                    <DateField.Input className="px-4 py-3 text-sm text-gray-800">
+                      {(segment) => <DateField.Segment segment={segment} />}
+                    </DateField.Input>
+                    <DateField.Suffix>
+                      <DatePicker.Trigger>
+                        <DatePicker.TriggerIndicator />
+                      </DatePicker.Trigger>
+                    </DateField.Suffix>
+                  </DateField.Group>
+                  <DatePicker.Popover>
+                    <Calendar aria-label="กำหนดเสร็จ">
+                      <Calendar.Header>
+                        <Calendar.NavButton slot="previous" />
+                        <Calendar.Heading />
+                        <Calendar.NavButton slot="next" />
+                      </Calendar.Header>
+                      <Calendar.Grid>
+                        <Calendar.GridHeader>
+                          {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+                        </Calendar.GridHeader>
+                        <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+                      </Calendar.Grid>
+                    </Calendar>
+                  </DatePicker.Popover>
+                </DatePicker>
               </div>
 
               {/* ── มอบหมายให้ ── */}
@@ -335,7 +378,7 @@ const CreateTaskModal = ({
               </button>
               <button
                 type="button"
-                disabled={!isValid || isPending}
+                disabled={!title.trim() || isPending}
                 onClick={handleSubmit}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-[#03662c] hover:bg-[#03662c]/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-[#03662c]/30 flex items-center gap-2"
               >
@@ -345,7 +388,9 @@ const CreateTaskModal = ({
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                 )}
-                {isPending ? 'กำลังสร้าง...' : 'สร้างงาน'}
+                {isPending
+                  ? (isEditMode ? 'กำลังบันทึก...' : 'กำลังสร้าง...')
+                  : (isEditMode ? 'บันทึก' : 'สร้างงาน')}
               </button>
             </div>
           </Modal.Dialog>
@@ -398,7 +443,7 @@ const TaskItem = ({
             </span>
             {task.dueLabel && (
               <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 rounded-md px-1.5 py-0.5 text-[10px] font-medium">
-                <Calendar size={9} />
+                <CalendarIcon size={9} />
                 {task.dueLabel}
               </span>
             )}
@@ -422,133 +467,6 @@ const TaskItem = ({
   );
 };
 
-// ─── EditTaskModal ────────────────────────────────────────────────────────────
-
-type EditTaskInitial = {
-  id: string;
-  title: string;
-  description: string | null;
-  dueDate: string | null;
-  assignedTo: string | null;
-};
-
-const EditTaskModal = ({
-  isOpen,
-  onOpenChange,
-  membersData,
-  initial,
-  isPending,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  membersData: FarmMembersData | undefined;
-  initial: EditTaskInitial;
-  isPending?: boolean;
-  onSubmit: (data: { title: string; description?: string; dueDate?: string | null; assignedTo?: string | null }) => void;
-}) => {
-  const [title, setTitle] = useState(initial.title);
-  const [description, setDescription] = useState(initial.description ?? '');
-  const [dueDate, setDueDate] = useState(initial.dueDate ?? '');
-  const [assignee, setAssignee] = useState<AssigneeSelection>(
-    assignedToToSelection(initial.assignedTo, membersData),
-  );
-  const [titleError, setTitleError] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setTitle(initial.title);
-    setDescription(initial.description ?? '');
-    setDueDate(initial.dueDate ?? '');
-    setAssignee(assignedToToSelection(initial.assignedTo, membersData));
-    setTitleError(false);
-  }, [isOpen, initial, membersData]);
-
-  const handleSubmit = () => {
-    const t = title.trim();
-    if (!t) { setTitleError(true); return; }
-    setTitleError(false);
-    onSubmit({
-      title: t,
-      description: description.trim() || undefined,
-      dueDate: dueDate || null,
-      assignedTo: selectionToAssignedTo(assignee),
-    });
-  };
-
-  return (
-    <Modal>
-      <Modal.Backdrop isOpen={isOpen} onOpenChange={() => onOpenChange(false)}>
-        <Modal.Container>
-          <Modal.Dialog className="sm:max-w-lg bg-white text-gray-800 border border-gray-200 shadow-2xl">
-            <Modal.CloseTrigger className="hover:bg-gray-100" />
-            <Modal.Header className="border-b border-gray-100">
-              <Modal.Heading className="font-bold text-gray-800">แก้ไขงาน</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="flex flex-col gap-4 py-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">
-                  ชื่องาน <span className="text-red-500">*</span>
-                </label>
-                <input
-                  className={`h-10 w-full rounded-xl border px-3 text-sm outline-none focus:ring-2 focus:ring-[#03662c]/30 ${titleError ? 'border-red-300' : 'border-gray-200'}`}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="เช่น รดน้ำแปลง A"
-                />
-                {titleError && <span className="text-xs text-red-600">กรุณากรอกชื่องาน</span>}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">รายละเอียด</label>
-                <textarea
-                  className="min-h-[88px] w-full resize-y rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#03662c]/30"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="อธิบายขั้นตอน วัสดุ หรือหมายเหตุ"
-                  rows={3}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">กำหนดเสร็จ</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#03662c]/30"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">มอบหมายให้</label>
-                <InlineAssigneePicker
-                  membersData={membersData}
-                  value={assignee}
-                  onChange={setAssignee}
-                />
-              </div>
-            </Modal.Body>
-            <Modal.Footer className="flex justify-end gap-2 border-t border-gray-100 pt-3">
-              <Button
-                variant="ghost"
-                className="font-semibold text-gray-700"
-                onPress={() => onOpenChange(false)}
-                isDisabled={isPending}
-              >
-                ยกเลิก
-              </Button>
-              <Button
-                className="bg-[#03662c] text-white hover:bg-[#03662c]/80 font-semibold"
-                onPress={handleSubmit}
-                isDisabled={isPending}
-              >
-                {isPending ? 'กำลังบันทึก…' : 'บันทึก'}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
-  );
-};
 
 // ─── LandDetailPage ───────────────────────────────────────────────────────────
 
@@ -609,9 +527,9 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
   }, [dbTasks, updateStatus, landId]);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<EditTaskInitial | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskModalInitial | null>(null);
 
-  const handleCreate = useCallback((formData: CreateTaskFormData) => {
+  const handleCreate = useCallback((formData: TaskFormData) => {
     createTask.mutate(
       { title: formData.title, description: formData.description, farmId, landId, assignedTo: formData.assignedTo, dueDate: formData.dueDate },
       { onSuccess: () => { setIsCreateModalOpen(false); setFilter('pending_confirmation'); } },
@@ -630,7 +548,7 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
     });
   }, [dbTasks]);
 
-  const handleEditSubmit = useCallback((data: { title: string; description?: string; dueDate?: string | null; assignedTo?: string | null }) => {
+  const handleEditSubmit = useCallback((data: TaskFormData) => {
     if (!editingTask) return;
     updateTask.mutate(
       { input: { taskId: editingTask.id, title: data.title, description: data.description ?? null, dueDate: data.dueDate, assignedTo: data.assignedTo }, landId, farmId },
@@ -692,7 +610,7 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
             <button
               key={s}
               onClick={() => setFilter(active ? 'all' : s)}
-              className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
+              className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
             >
               <span className={`text-lg font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
               <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
@@ -752,7 +670,7 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
         </Button>
       </div>
 
-      <CreateTaskModal
+      <TaskModal
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         membersData={membersData}
@@ -761,16 +679,15 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
         onSubmit={handleCreate}
       />
 
-      {editingTask && (
-        <EditTaskModal
-          isOpen={!!editingTask}
-          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
-          membersData={membersData}
-          initial={editingTask}
-          isPending={updateTask.isPending}
-          onSubmit={handleEditSubmit}
-        />
-      )}
+      <TaskModal
+        isOpen={!!editingTask}
+        onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+        membersData={membersData}
+        landName={land.name}
+        initialValues={editingTask ?? undefined}
+        isPending={updateTask.isPending}
+        onSubmit={handleEditSubmit}
+      />
     </Column>
   );
 };

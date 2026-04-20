@@ -169,7 +169,7 @@ const FarmSummaryPanel = ({
             <button
               key={s}
               onClick={() => setFilter(active ? 'all' : s)}
-              className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
+              className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
             >
               <span className={`text-base font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
               <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
@@ -407,7 +407,7 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                 <div key={landItem.id} className="group flex items-center rounded-xl hover:bg-black/5 transition-colors shrink-0">
                   <button
                     type="button"
-                    className="flex items-center gap-0 flex-1 min-w-0 p-2.5 text-left"
+                    className="flex items-center gap-0 flex-1 min-w-0 p-2.5 text-left cursor-pointer"
                     onClick={() => navigateToLand(landItem.id, landItem.coords, landItem)}
                   >
                     <div

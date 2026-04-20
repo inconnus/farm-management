@@ -75,7 +75,7 @@ export const FarmListPage = ({
                   <div className="group relative w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-black/5 transition-colors">
                     <button
                       type="button"
-                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
                       onClick={() => onSelectFarm(farm.id)}
                     >
                       <FarmSatelliteImage
@@ -94,7 +94,9 @@ export const FarmListPage = ({
                         <span className="text-gray-400 text-[12px]">{farm.plotCount} แปลง</span>
                         <Chip className="mt-0.5">
                           <MapPinIcon size={13} color="#ebebec" fill="red" />
-                          <Chip.Label className="text-[11px]">{farm.province}</Chip.Label>
+                          <Chip.Label className="text-[11px]">
+                            {[farm.district, farm.province].filter(Boolean).join(' · ') || '—'}
+                          </Chip.Label>
                         </Chip>
                       </Column>
                     </button>
@@ -106,7 +108,15 @@ export const FarmListPage = ({
                         items={FARM_MENU_ITEMS}
                         onAction={(action) => {
                           if (action === 'edit') {
-                            setEditingFarm({ id: farm.id, name: farm.name, province: farm.province, lat: farm.lat ?? undefined, lng: farm.lng ?? undefined });
+                            setEditingFarm({
+                              id: farm.id,
+                              name: farm.name,
+                              district: farm.district ?? undefined,
+                              province: farm.province,
+                              country: farm.country ?? undefined,
+                              lat: farm.lat ?? undefined,
+                              lng: farm.lng ?? undefined,
+                            });
                           }
                           if (action === 'delete') {
                             deleteFarm.mutate(farm.id);
@@ -143,7 +153,14 @@ export const FarmListPage = ({
         onOpenChange={setIsCreateModalOpen}
         onSubmit={(data) => {
           createFarm(
-            { name: data.name, lat: data.location.lat, lng: data.location.lng, province: data.location.placeName },
+            {
+              name: data.name,
+              lat: data.location.lat,
+              lng: data.location.lng,
+              district: data.location.district,
+              province: data.location.province,
+              country: data.location.country,
+            },
             { onSuccess: () => setIsCreateModalOpen(false) },
           );
         }}
@@ -162,7 +179,9 @@ export const FarmListPage = ({
               farmId: editingFarm.id,
               input: {
                 name: data.name,
-                province: data.location.placeName,
+                district: data.location.district,
+                province: data.location.province,
+                country: data.location.country,
                 lat: data.location.lat,
                 lng: data.location.lng,
               },

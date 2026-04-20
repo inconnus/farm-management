@@ -29,6 +29,9 @@ type PinLocation = {
   lat: number;
   lng: number;
   placeName?: string;
+  district?: string;
+  province?: string;
+  country?: string;
 };
 
 export type FarmFormData = { name: string; location: PinLocation };
@@ -37,8 +40,24 @@ export type FarmInitialValues = {
   name: string;
   lat?: number;
   lng?: number;
+  district?: string;
   province?: string;
+  country?: string;
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Split "อำเภอโกสัมพีนคร, จังหวัดกำแพงเพชร, ประเทศไทย" → { district, province, country } */
+function parsePlaceName(placeName: string): { district?: string; province?: string; country?: string } {
+  const parts = placeName.split(', ').map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    return { district: parts[0], province: parts[1], country: parts[parts.length - 1] };
+  }
+  if (parts.length === 2) {
+    return { district: undefined, province: parts[0], country: parts[1] };
+  }
+  return { district: undefined, province: parts[0], country: undefined };
+}
 
 type CreateFarmModalProps = {
   isOpen: boolean;
@@ -105,6 +124,9 @@ export const CreateFarmModal = ({
             lat: initialValues.lat,
             lng: initialValues.lng,
             placeName: initialValues.province,
+            district: initialValues.district,
+            province: initialValues.province,
+            country: initialValues.country,
           });
         }
       });
@@ -112,9 +134,9 @@ export const CreateFarmModal = ({
       m.on('click', (e) => {
         const { lng, lat } = e.lngLat;
         placePinAt(m, lng, lat);
-        reverseGeocode(lng, lat).then((name) => {
-          setPinLocation({ lat, lng, placeName: name });
-          setLocationSearch(name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        reverseGeocode(lng, lat).then((result) => {
+          setPinLocation({ lat, lng, placeName: result?.placeName, district: result?.district, province: result?.province, country: result?.country });
+          setLocationSearch(result?.placeName ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
         });
       });
 
@@ -138,7 +160,14 @@ export const CreateFarmModal = ({
       setLocationSearch(initialValues.province ?? '');
       setPinLocation(
         initialValues.lat != null && initialValues.lng != null
-          ? { lat: initialValues.lat, lng: initialValues.lng, placeName: initialValues.province }
+          ? {
+              lat: initialValues.lat,
+              lng: initialValues.lng,
+              placeName: initialValues.province,
+              district: initialValues.district,
+              province: initialValues.province,
+              country: initialValues.country,
+            }
           : null,
       );
     } else {
@@ -168,9 +197,9 @@ export const CreateFarmModal = ({
 
         marker.on('dragend', () => {
           const pos = marker.getLngLat();
-          reverseGeocode(pos.lng, pos.lat).then((name) => {
-            setPinLocation({ lat: pos.lat, lng: pos.lng, placeName: name });
-            setLocationSearch(name ?? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`);
+          reverseGeocode(pos.lng, pos.lat).then((result) => {
+            setPinLocation({ lat: pos.lat, lng: pos.lng, placeName: result?.placeName, district: result?.district, province: result?.province, country: result?.country });
+            setLocationSearch(result?.placeName ?? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`);
           });
         });
 
@@ -180,12 +209,17 @@ export const CreateFarmModal = ({
     [],
   );
 
-  async function reverseGeocode(lng: number, lat: number): Promise<string | undefined> {
+  async function reverseGeocode(
+    lng: number,
+    lat: number,
+  ): Promise<{ placeName: string; district?: string; province?: string; country?: string } | undefined> {
     try {
       const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${ACCESS_TOKEN}&language=th&types=place,district,region`;
       const res = await fetch(url);
       const json = await res.json();
-      return json.features?.[0]?.place_name;
+      const placeName: string | undefined = json.features?.[0]?.place_name;
+      if (!placeName) return undefined;
+      return { placeName, ...parsePlaceName(placeName) };
     } catch {
       return undefined;
     }
@@ -208,7 +242,8 @@ export const CreateFarmModal = ({
     const [lng, lat] = feature.center;
     setSuggestions([]);
     setLocationSearch(feature.place_name);
-    setPinLocation({ lat, lng, placeName: feature.place_name });
+    const parsed = parsePlaceName(feature.place_name);
+    setPinLocation({ lat, lng, placeName: feature.place_name, ...parsed });
     if (mapRef.current) {
       placePinAt(mapRef.current, lng, lat);
       mapRef.current.flyTo({ center: [lng, lat], zoom: 12, duration: 800 });

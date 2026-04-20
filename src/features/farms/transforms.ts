@@ -6,7 +6,9 @@ export type { LandData as Land };
 export type Farm = {
   id: string;
   name: string;
+  district: string | null;
   province: string;
+  country: string | null;
   plotCount: number;
   image: string;
   lands: LandData[];
@@ -39,7 +41,9 @@ export function toFarm(db: DbFarmWithLands): Farm {
   return {
     id: db.id,
     name: db.name,
+    district: db.district ?? null,
     province,
+    country: db.country ?? null,
     plotCount: db.lands.length,
     image: db.image_url ?? '',
     lands: db.lands.map((l) => toLandData(l, province)),

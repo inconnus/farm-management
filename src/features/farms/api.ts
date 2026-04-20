@@ -43,7 +43,9 @@ export type CreateFarmInput = {
   organizationId: string;
   lat: number;
   lng: number;
+  district?: string;
   province?: string;
+  country?: string;
 };
 
 export type CreateLandInput = {
@@ -78,7 +80,9 @@ export async function createLand(input: CreateLandInput): Promise<DbLand> {
 
 export type UpdateFarmInput = {
   name?: string;
+  district?: string;
   province?: string;
+  country?: string;
   lat?: number;
   lng?: number;
 };
@@ -88,7 +92,9 @@ export async function updateFarm(farmId: string, input: UpdateFarmInput): Promis
     .from('farms')
     .update({
       ...(input.name !== undefined && { name: input.name }),
+      ...(input.district !== undefined && { district: input.district }),
       ...(input.province !== undefined && { province: input.province }),
+      ...(input.country !== undefined && { country: input.country }),
       ...(input.lat !== undefined && { lat: input.lat }),
       ...(input.lng !== undefined && { lng: input.lng }),
     })
@@ -140,7 +146,9 @@ export async function createFarm(input: CreateFarmInput): Promise<DbFarm> {
       organization_id: input.organizationId,
       lat: input.lat,
       lng: input.lng,
+      district: input.district ?? null,
       province: input.province ?? null,
+      country: input.country ?? null,
     })
     .select()
     .single();
@@ -157,7 +165,7 @@ export async function fetchFarms(
   const { data, error } = await supabase
     .from('farms')
     .select(`
-      id, name, province, image_url, description, total_area, area_unit,
+      id, name, district, province, country, image_url, description, total_area, area_unit,
       lat, lng, created_at, updated_at, organization_id, created_by,
       lands ( id, name, crop_type, color, geometry_json, image_url, status, area, area_unit )
     `)
