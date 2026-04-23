@@ -11,6 +11,7 @@ import { useTilesetsQuery } from '../hooks/useTilesetsQuery';
 import { devicePopupAtom } from '../store/devicePopupAtom';
 import { CameraPopup } from './CameraPopup';
 import { MapPopup } from './index';
+import { LightPopup } from './LightPopup';
 import { MapStyleSwitcher } from './MapStyleSwitcher';
 import { SolarCellPopup } from './SolarCellPopup';
 
@@ -179,6 +180,17 @@ const MapView = () => {
           )}
           {devicePopup.type === 'solar' && devicePopup.solar && (
             <SolarCellPopup device={devicePopup.solar} />
+          )}
+          {devicePopup.type === 'light' && devicePopup.light && (
+            <LightPopup
+              light={devicePopup.light}
+              onUpdate={(updated) =>
+                setDevicePopup({
+                  ...devicePopup,
+                  light: { ...devicePopup.light, ...updated },
+                })
+              }
+            />
           )}
         </MapPopup>
       )}

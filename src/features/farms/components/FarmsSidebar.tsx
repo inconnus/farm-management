@@ -3,10 +3,13 @@ import {
   type CameraData,
   CameraMarker,
   FarmMarker,
+  type LightData,
+  LightMarker,
   PolygonMarker,
   type SolarCellData,
   SolarCellMarker,
   toCameraData,
+  toLightData,
   toSolarCellData,
 } from '@features/map/components';
 import { MapPolygonDrawMount } from '@features/map/components/MapPolygonDrawMount';
@@ -98,6 +101,10 @@ export const FarmsSidebar = () => {
   );
   const solarCells = useMemo<SolarCellData[]>(
     () => dbDevices?.filter((d) => d.device_type === 'solar_cell').map(toSolarCellData) ?? [],
+    [dbDevices],
+  );
+  const lights = useMemo<LightData[]>(
+    () => dbDevices?.filter((d) => d.device_type === 'light').map(toLightData) ?? [],
     [dbDevices],
   );
 
@@ -303,6 +310,13 @@ export const FarmsSidebar = () => {
           key={sc.id}
           device={sc}
           onClick={(d) => setDevicePopup({ type: 'solar', lngLat: [d.lng, d.lat], solar: d })}
+        />
+      ))}
+      {farmId && lights.map((l) => (
+        <LightMarker
+          key={l.id}
+          light={l}
+          onClick={(light) => setDevicePopup({ type: 'light', lngLat: [light.lng, light.lat], light })}
         />
       ))}
     </SidebarNav>

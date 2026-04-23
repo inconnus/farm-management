@@ -566,7 +566,7 @@ export type Database = {
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
     }
     Enums: {
-      device_type: "camera" | "solar_cell" | "water_pump" | "sensor"
+      device_type: "camera" | "solar_cell" | "water_pump" | "sensor" | "light"
       farm_member_role: "owner" | "manager" | "worker"
       land_status: "active" | "fallow" | "harvested" | "preparing"
       org_member_role: "owner" | "admin" | "member"
@@ -700,7 +700,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      device_type: ["camera", "solar_cell", "water_pump", "sensor"],
+      device_type: ["camera", "solar_cell", "water_pump", "sensor", "light"],
       farm_member_role: ["owner", "manager", "worker"],
       land_status: ["active", "fallow", "harvested", "preparing"],
       org_member_role: ["owner", "admin", "member"],

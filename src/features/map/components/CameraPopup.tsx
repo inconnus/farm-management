@@ -5,16 +5,26 @@ import ReactPlayer from 'react-player';
 import type { CameraData } from './CameraMarker';
 import { WebRTCPlayer } from './WebRTCPlayer';
 
-// const Player = ReactPlayer as any;
-
 type CameraPopupProps = {
   camera: CameraData;
-  url: string;
+  /** fallback เมื่อไม่มี webrtc / m3u8 / stream ใน config */
+  url?: string;
 };
 
-const VideoContent = ({ camera, url }: CameraPopupProps) => {
+function CameraVideoBody({ camera, url }: CameraPopupProps) {
   if (camera.webrtcUrl) {
     return <WebRTCPlayer url={camera.webrtcUrl} />;
+  }
+  if (camera.m3u8Url) {
+    return (
+      <ReactPlayer
+        src={camera.m3u8Url}
+        playing
+        controls
+        width="100%"
+        height="100%"
+      />
+    );
   }
   if (camera.streamUrl) {
     return (
@@ -27,19 +37,26 @@ const VideoContent = ({ camera, url }: CameraPopupProps) => {
       />
     );
   }
+  if (url) {
+    return (
+      <ReactPlayer src={url} playing controls width="100%" height="100%" />
+    );
+  }
   return (
-    <Column className="items-center justify-center h-full gap-3 text-gray-400">
+    <Column className="items-center justify-center h-full w-full gap-3 text-gray-400 bg-gray-900">
       <CctvIcon size={36} />
       <span className="text-sm">ไม่มีสัญญาณภาพ</span>
     </Column>
   );
-};
+}
 
 export const CameraPopup = ({ camera, url }: CameraPopupProps) => {
   return (
     <Card className="flex w-[380px] flex-col overflow-hidden border-none rounded-3xl bg-white/85 p-0 shadow-2xl backdrop-blur-xl gap-0">
-      <div className="relative  w-full shrink-0 overflow-hidden bg-gray-900 rounded-t-3xl">
-        {camera.webrtcUrl ? <VideoContent camera={camera} url={url} /> : <ReactPlayer src={url} autoPlay width={'100%'} height={'100%'} />}
+      <div className="relative w-full shrink-0 overflow-hidden bg-gray-900 rounded-t-3xl aspect-video">
+        <div className="absolute inset-0">
+          <CameraVideoBody camera={camera} url={url} />
+        </div>
         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
         <div className="absolute top-3 left-4">
           <Row className="items-center gap-1.5">

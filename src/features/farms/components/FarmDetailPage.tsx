@@ -1,8 +1,10 @@
 import { Column, Row } from '@app/layout';
 import {
   toCameraData,
+  toLightData,
   toSolarCellData,
   type CameraData,
+  type LightData,
   type SolarCellData,
 } from '@features/map/components';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
@@ -23,6 +25,7 @@ import {
   Pencil,
   SearchIcon,
   SolarPanelIcon,
+  SunIcon,
   Trash2,
   UserRound,
 } from 'lucide-react';
@@ -317,6 +320,10 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
     () => dbDevices?.filter((d) => d.device_type === 'solar_cell').map(toSolarCellData) ?? [],
     [dbDevices],
   );
+  const lights = useMemo<LightData[]>(
+    () => dbDevices?.filter((d) => d.device_type === 'light').map(toLightData) ?? [],
+    [dbDevices],
+  );
 
   // ─── Search filtering ─────────────────────────────────────────────────────
 
@@ -339,6 +346,12 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
     const q = search.trim().toLowerCase();
     return solarCells.filter((s) => s.name.toLowerCase().includes(q));
   }, [solarCells, search]);
+
+  const filteredLights = useMemo(() => {
+    if (!search.trim()) return lights;
+    const q = search.trim().toLowerCase();
+    return lights.filter((l) => l.name.toLowerCase().includes(q));
+  }, [lights, search]);
 
   // ─── Land navigation ──────────────────────────────────────────────────────
 
@@ -516,7 +529,34 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                 </Row>
               ))}
 
-              {filteredCameras.length === 0 && filteredSolarCells.length === 0 && (
+              {filteredLights.map((light) => (
+                <Row
+                  key={light.id}
+                  onClick={() => {
+                    if (mapInstance) mapInstance.flyTo({ center: [light.lng, light.lat], zoom: 17, duration: 800 });
+                    setDevicePopup({ type: 'light', lngLat: [light.lng, light.lat], light });
+                  }}
+                  className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+                >
+                  <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center bg-yellow-50 border border-yellow-200 relative">
+                    <SunIcon size={16} className={light.isOn ? 'text-yellow-600' : 'text-yellow-700/50'} />
+                    {light.isOn && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 border border-white" />
+                    )}
+                  </div>
+                  <Column className="ml-2.5 min-w-0">
+                    <span className="font-medium text-sm truncate">{light.name}</span>
+                    <Chip className="w-fit mt-0.5 bg-yellow-50">
+                      <Chip.Label className="text-[11px] text-yellow-800">
+                        หลอดไฟ · {light.isOn ? 'เปิด' : 'ปิด'} · {light.brightness}%
+                      </Chip.Label>
+                    </Chip>
+                  </Column>
+                  <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                </Row>
+              ))}
+
+              {filteredCameras.length === 0 && filteredSolarCells.length === 0 && filteredLights.length === 0 && (
                 <span className="text-center text-gray-400 py-4 text-sm">
                   {search.trim() ? 'ไม่พบอุปกรณ์ที่ค้นหา' : 'ยังไม่มีอุปกรณ์'}
                 </span>

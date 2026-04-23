@@ -30,4 +30,11 @@ export {
   toSolarCellData,
 } from './SolarCellMarker';
 export { SolarCellPopup } from './SolarCellPopup';
+export type { LightData } from './LightMarker';
+export {
+  LightMarker,
+  LightMarkerFace,
+  toLightData,
+} from './LightMarker';
+export { LightPopup } from './LightPopup';
 export { default as WeatherWidget } from './WeatherWidget';

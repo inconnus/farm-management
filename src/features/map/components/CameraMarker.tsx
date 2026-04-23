@@ -8,6 +8,8 @@ export type CameraData = {
   lat: number;
   lng: number;
   webrtcUrl?: string;
+  /** HLS playlist (.m3u8) — เก็บใน device.config เป็น `m3u8_url` */
+  m3u8Url?: string;
   streamUrl?: string;
 };
 
@@ -19,6 +21,7 @@ export function toCameraData(device: DbDevice): CameraData {
     lat: device.lat,
     lng: device.lng,
     webrtcUrl: (config.webrtc_url as string) || undefined,
+    m3u8Url: (config.m3u8_url as string) || undefined,
     streamUrl: (config.stream_url as string) || undefined,
   };
 }
