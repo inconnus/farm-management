@@ -1,8 +1,10 @@
 import type { OrgMembership } from '@store/orgStore';
 import { useAtomValue } from 'jotai';
-import { useNavigate } from 'react-router-dom';
+import type { Location } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthLoadingAtom, organizationsAtom } from '../store';
+import { getSafeRedirectPath } from '../returnToPath';
 
 const roleLabelMap: Record<string, string> = {
   owner: 'เจ้าของ',
@@ -18,11 +20,18 @@ const roleColorMap: Record<string, string> = {
 
 export function OrgSelectPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const organizations = useAtomValue(organizationsAtom);
   const isLoading = useAtomValue(isAuthLoadingAtom);
   const { signOut } = useAuth();
 
   const handleSelect = (org: OrgMembership) => {
+    const from = (location.state as { from?: Location } | null)?.from;
+    const target = getSafeRedirectPath(from, org.slug);
+    if (target) {
+      navigate(target, { replace: true });
+      return;
+    }
     navigate(`/${org.slug}/farms`, { replace: true });
   };
 

@@ -1,9 +1,11 @@
 import type { OrgMembership } from '@store/orgStore';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import type { Location } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserOrganizations } from '../orgApi';
+import { getSafeRedirectPath } from '../returnToPath';
 
 // ─── Animation (iOS-style push/pop) ──────────────────────────────
 
@@ -283,6 +285,7 @@ function OrgSelectStep({ orgs, onSelect, onBack }: OrgSelectStepProps) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [step, setStep] = useState<Step>('login');
   const [direction, setDirection] = useState(1);
@@ -322,16 +325,38 @@ export function LoginPage() {
     });
   }, []);
 
-  // Handlers
-  const handleLoginSuccess = useCallback((fetchedOrgs: OrgMembership[]) => {
-    setOrgs(fetchedOrgs);
-    setDirection(1);
-    setStep('org');
-  }, []);
+  const redirectAfterOrg = useCallback(
+    (org: OrgMembership) => {
+      const from = (location.state as { from?: Location } | null)?.from;
+      const target = getSafeRedirectPath(from, org.slug);
+      if (target) {
+        navigate(target, { replace: true });
+        return;
+      }
+      navigate(`/${org.slug}/dashboard`, { replace: true });
+    },
+    [location, navigate],
+  );
 
-  const handleOrgSelect = useCallback((org: OrgMembership) => {
-    navigate(`/${org.slug}/dashboard`, { replace: true });
-  }, [navigate]);
+  const handleLoginSuccess = useCallback(
+    (fetchedOrgs: OrgMembership[]) => {
+      if (fetchedOrgs.length === 1) {
+        redirectAfterOrg(fetchedOrgs[0]);
+        return;
+      }
+      setOrgs(fetchedOrgs);
+      setDirection(1);
+      setStep('org');
+    },
+    [redirectAfterOrg],
+  );
+
+  const handleOrgSelect = useCallback(
+    (org: OrgMembership) => {
+      redirectAfterOrg(org);
+    },
+    [redirectAfterOrg],
+  );
 
   const handleBack = useCallback(() => {
     setDirection(-1);
