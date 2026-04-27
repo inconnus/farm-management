@@ -116,7 +116,7 @@ export const fetchIOTDeviceTelemetry = async (
   }
 
   const response = await fetch(
-    `https://api-dev.kasetkorn.app/api/iot/read/last/${appIotId}`,
+    `https://api.kasetkorn.app/api/iot/read/last/${appIotId}`,
     {
       headers: {
         Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzc2Njk0MjUzfQ.Y8Edwh77zTpohMffVloQRy8O8EO6NsDY3CIwg6dvCNo`,
@@ -227,7 +227,7 @@ const mockIOTDevices: IOTDevice[] = [
 for (const d of mockIOTDevices) mockAppIotIds.add(d.appIotId);
 export const fetchIOTDevices = async (): Promise<IOTDevice[]> => {
   const response = await fetch(
-    'https://api-dev.kasetkorn.app/api/iot/setup/GetIotAll',
+    'https://api.kasetkorn.app/api/iot/setup/GetIotAll',
   );
   if (!response.ok) {
     throw new Error('Failed to fetch IoT devices');
@@ -247,7 +247,7 @@ export const fetchGetLand = async (
   appFarmId: string,
 ): Promise<LandResponse> => {
   const response = await fetch(
-    'https://api-dev.kasetkorn.app/api/land/GetLand',
+    'https://api.kasetkorn.app/api/land/GetLand',
     {
       method: 'POST',
       headers: {
