@@ -111,9 +111,9 @@ export const fetchIOTDeviceTelemetry = async (
   appIotId: string,
 ): Promise<TelemetryResponse> => {
   // ถ้าเป็น mock device → return dummy data ทันที (ไม่เรียก API จริง)
-  if (mockAppIotIds.has(appIotId)) {
-    return generateMockTelemetry();
-  }
+  // if (mockAppIotIds.has(appIotId)) {
+  //   return generateMockTelemetry();
+  // }
 
   const response = await fetch(
     `https://api.kasetkorn.app/api/iot/read/last/${appIotId}`,
