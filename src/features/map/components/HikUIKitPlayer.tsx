@@ -1,178 +1,207 @@
-import { HIK_PLUGIN_PATH, loadHikSdk } from '@features/map/lib/loadHikSdk';
 import type { HikCameraParams } from '@features/map/types/hikUIKit';
+import { EZUIKitPlayer } from 'ezuikit-js';
 import { useEffect, useRef, useState } from 'react';
 
 type HikUIKitPlayerProps = {
   params: HikCameraParams;
-  /** id คงที่ต่อกล้อง — ช่วยให้ plugin bind DOM ซ้ำได้บน prod */
   instanceKey: string;
   className?: string;
 };
 
+const API_LIVE_ADDRESS =
+  'https://isgp.hik-partner.com/api/hpcgw/v1/device/live/address/get';
+const HIK_ISGP_DOMAIN = 'https://isgpopen.ezvizlife.com';
 const MIN_W = 320;
 const MIN_H = 180;
 const CONNECT_MAX_FRAMES = 120;
 
+const baseUrl = import.meta.env.BASE_URL ?? '/';
+const EZUIKIT_STATIC_PATH = `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}ezuikit_static`;
+
+function decodeTicket(ticket: string): string {
+  if (!ticket) return '';
+  try {
+    return atob(ticket);
+  } catch {
+    return ticket;
+  }
+}
+
 /**
- * Live preview ผ่าน Hikvision ISGP (HPPUIKitPlayer + jsPlugin)
- * ต้องมี assets ใน /public/hik-sdk/
+ * Live preview ผ่าน ezuikit-js — ดึง url/ticket จาก ISGP แล้วเล่นด้วย EZUIKitPlayer
  */
 export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlayerProps) {
-  const containerId = `hik-uikit-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  const containerId = `hik-ezuikit-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<InstanceType<NonNullable<typeof window.HPPUIKitPlayer>> | null>(
-    null,
-  );
+  const playerRef = useRef<EZUIKitPlayer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    let rafId = 0;
-    let attempts = 0;
-    let resizeObserver: ResizeObserver | undefined;
-    let playRafId = 0;
     let hideLoadingTimer = 0;
+    let resizeObserver: ResizeObserver | undefined;
+    const abort = new AbortController();
 
     const clearLoading = () => {
+      if (!cancelled) setLoading(false);
+    };
+
+    const onFirstFrame = () => {
       if (!cancelled) {
-        setLoading(false);
+        clearLoading();
+        setError(null);
       }
     };
 
-    const mountPlayer = async () => {
-      const node = containerRef.current;
-      if (!node || cancelled) return;
+    const waitForHost = (): HTMLElement | null => {
+      const host = document.getElementById(containerId);
+      if (host && document.documentElement.contains(host)) return host;
+      return null;
+    };
 
-      if (!document.documentElement.contains(node)) {
+    const initPlayer = async () => {
+      let attempts = 0;
+      while (!waitForHost() && attempts < CONNECT_MAX_FRAMES && !cancelled) {
         attempts += 1;
-        if (attempts < CONNECT_MAX_FRAMES) {
-          rafId = requestAnimationFrame(() => {
-            void mountPlayer();
-          });
-        }
-        return;
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
       }
+
+      const host = waitForHost();
+      if (!host || cancelled) return;
 
       try {
-        await loadHikSdk();
-        if (cancelled || !containerRef.current) return;
+        const res = await fetch(API_LIVE_ADDRESS, {
+          method: 'POST',
+          signal: abort.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${params.accessToken}`,
+          },
+          body: JSON.stringify({
+            deviceSerial: params.deviceSerial,
+            channelNo: params.channelNo ?? 1,
+            code: params.code ?? '',
+            quality: params.quality ?? 1,
+          }),
+        });
 
-        const el = containerRef.current;
-        const w = Math.max(el.clientWidth, MIN_W);
-        const h = Math.max(el.clientHeight, MIN_H);
+        const json = (await res.json()) as {
+          data?: { url?: string; ticket?: string };
+          msg?: string;
+          message?: string;
+        };
 
-        if (!window.HPPUIKitPlayer) {
-          throw new Error('HPPUIKitPlayer is not available');
+        if (!res.ok || !json.data?.url) {
+          const msg = json.msg || json.message || res.statusText || 'ไม่ทราบสาเหตุ';
+          throw new Error(`${msg}${res.status ? ` (${res.status})` : ''}`);
         }
 
-        const PlayerCtor = window.HPPUIKitPlayer;
-        const player = new PlayerCtor({
-          wndId: containerId,
-          accessToken: params.accessToken,
+        if (cancelled) return;
+
+        const url = json.data.url;
+        const accessToken = decodeTicket(json.data.ticket ?? '');
+        const w = Math.max(host.clientWidth, MIN_W);
+        const h = Math.max(host.clientHeight, MIN_H);
+
+        if (playerRef.current) {
+          try {
+            playerRef.current.stop();
+            playerRef.current.destroy();
+          } catch {
+            /* ignore */
+          }
+          playerRef.current = null;
+        }
+
+        const player = new EZUIKitPlayer({
+          id: containerId,
+          url,
+          accessToken,
           width: w,
           height: h,
-          pluginPath: HIK_PLUGIN_PATH,
-          deviceSerial: params.deviceSerial,
-          channelNo: params.channelNo ?? 1,
-          code: params.code ?? '',
-          quality: params.quality ?? 1,
-          method: params.method ?? 2,
-          pluginErrorHandler: (iWndIndex, iErrorCode, oError) => {
-            console.error('[HikUIKit]', iWndIndex, iErrorCode, oError);
-            if (!cancelled) {
-              clearLoading();
-              setError(`ข้อผิดพลาดกล้อง (${iErrorCode})`);
-            }
+          template: 'simple',
+          scaleMode: 1,
+          staticPath: EZUIKIT_STATIC_PATH,
+          language: 'zh',
+          env: { domain: HIK_ISGP_DOMAIN },
+          streamInfoCBType: 1,
+          loggerOptions: {
+            level: 'WARN',
+            name: 'ezuikit',
+            showTime: false,
           },
-          performanceLack: () => {
-            console.warn('[HikUIKit] Insufficient performance');
-          },
-          onStreamStart: () => {
-            if (!cancelled) {
-              clearLoading();
-              setError(null);
+          handleError: (err) => {
+            if (cancelled) return;
+            clearLoading();
+            if (err.type === 'handleRunTimeInfoError' && err.data?.nErrorCode === 5) {
+              setError('รหัสผ่านอุปกรณ์ไม่ถูกต้อง');
+              return;
             }
-          },
-          onFirstFrame: () => {
-            if (!cancelled) {
-              clearLoading();
-              setError(null);
-            }
-          },
-          onPlayError: (message) => {
-            if (!cancelled) {
-              clearLoading();
-              setError(message);
-            }
+            setError('เล่นวิดีโอไม่สำเร็จ');
           },
         });
+
         playerRef.current = player;
 
-        await player.whenReady?.();
-        if (cancelled || !playerRef.current) return;
-
-        hideLoadingTimer = window.setTimeout(clearLoading, 5000);
-
-        // รอ DOM + canvas ของ plugin พร้อมก่อน realplay (สำคัญเมื่อเปิด popup ซ้ำ)
-        playRafId = requestAnimationFrame(() => {
-          playRafId = requestAnimationFrame(() => {
-            if (cancelled || !playerRef.current) return;
-            playerRef.current.realplay();
-          });
-        });
+        player.eventEmitter.on(EZUIKitPlayer.EVENTS.firstFrameDisplay, onFirstFrame);
+        hideLoadingTimer = window.setTimeout(clearLoading, 8000);
 
         resizeObserver = new ResizeObserver(() => {
-          const target = containerRef.current;
-          if (!target || !playerRef.current) return;
-          const rw = Math.max(target.clientWidth, MIN_W);
-          const rh = Math.max(target.clientHeight, MIN_H);
-          playerRef.current.resize(rw, rh);
+          const el = document.getElementById(containerId);
+          const current = playerRef.current;
+          if (!el || !current) return;
+          try {
+            current.reSize(
+              Math.max(el.clientWidth, MIN_W),
+              Math.max(el.clientHeight, MIN_H),
+            );
+          } catch {
+            /* ignore */
+          }
         });
-        resizeObserver.observe(el);
+        resizeObserver.observe(host);
       } catch (err) {
-        if (!cancelled) {
-          setLoading(false);
-          setError(err instanceof Error ? err.message : 'โหลด SDK ไม่สำเร็จ');
-        }
+        if (cancelled || abort.signal.aborted) return;
+        clearLoading();
+        setError(err instanceof Error ? err.message : 'เชื่อมต่อกล้องไม่สำเร็จ');
       }
     };
 
-    void mountPlayer();
+    void initPlayer();
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(rafId);
-      cancelAnimationFrame(playRafId);
+      abort.abort();
       window.clearTimeout(hideLoadingTimer);
       resizeObserver?.disconnect();
+
       const player = playerRef.current;
       playerRef.current = null;
-      if (player?.destroy) {
-        void Promise.resolve(player.destroy()).catch(() => {
-          /* ignore teardown errors */
-        });
+      if (player) {
+        try {
+          player.eventEmitter.off(EZUIKitPlayer.EVENTS.firstFrameDisplay, onFirstFrame);
+          player.stop();
+          player.destroy();
+        } catch {
+          /* ignore */
+        }
       }
     };
   }, [
     containerId,
-    instanceKey,
     params.accessToken,
     params.deviceSerial,
     params.channelNo,
     params.code,
     params.quality,
-    params.method,
   ]);
 
   return (
     <div className={`relative ${className ?? 'h-full w-full min-h-[180px] bg-black'}`}>
-      <div
-        ref={containerRef}
-        id={containerId}
-        className="h-full w-full min-h-[180px] bg-[#4C4B4B]"
-      />
+      <div id={containerId} className="h-full w-full min-h-[180px] bg-[#4C4B4B]" />
       {loading && !error && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-white text-sm pointer-events-none">
           กำลังเชื่อมต่อกล้อง…

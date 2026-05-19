@@ -23,6 +23,7 @@
     "@tanstack/react-query": "^5.95.2",
     "@turf/turf": "^7.3.4",
     "@types/mapbox__mapbox-gl-draw": "^1.4.9",
+    "ezuikit-js": "9.0.2",
     "jotai": "^2.18.1",
     "lucide-react": "^1.0.0-rc.0",
     "mapbox-gl": "^3.20.0",

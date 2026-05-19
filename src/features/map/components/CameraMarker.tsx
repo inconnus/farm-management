@@ -10,9 +10,9 @@ export type CameraData = {
   name: string;
   lat: number;
   lng: number;
-  /** `hik` = ISGP HPPUIKitPlayer, อื่นๆ = webrtc / m3u8 / stream ตามลำดับเดิม */
+  /** `hik` = ISGP + ezuikit-js, อื่นๆ = webrtc / m3u8 / stream ตามลำดับเดิม */
   mode?: CameraPlayerMode;
-  /** พารามิเตอร์สำหรับ HPPUIKitPlayer (เมื่อ mode === 'hik') */
+  /** พารามิเตอร์ ISGP API (เมื่อ mode === 'hik') */
   hik?: HikCameraParams;
   /** flag จาก device.config ว่าเป็นกล้อง Hikvision (ใช้ EzvizHlsPlayer) */
   isHikvision?: boolean;

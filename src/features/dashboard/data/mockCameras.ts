@@ -1,7 +1,7 @@
 import type { DbDevice } from '@features/devices/hooks/useDevicesQuery';
 import { toCameraData } from '@features/map/components';
 
-/** config สำหรับ HPPUIKitPlayer (ISGP) — ใส่ใน farm_devices.config เมื่อ mode = hik */
+/** config ISGP + ezuikit-js — ใส่ใน farm_devices.config เมื่อ mode = hik */
 export const HIK_SDK_MOCK_CONFIG = {
   mode: 'hik',
   access_token: 'hpc.6gkhm0Id7BkA8CN5zYBu9IkNDqEkifaA',

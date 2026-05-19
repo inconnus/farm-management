@@ -5,6 +5,14 @@ import { pluginReact } from '@rsbuild/plugin-react';
 // Docs: https://rsbuild.rs/config/
 export default defineConfig({
   plugins: [pluginReact()],
+  output: {
+    copy: [
+      {
+        from: 'node_modules/ezuikit-js/ezuikit_static',
+        to: 'ezuikit_static',
+      },
+    ],
+  },
   tools: {
     // Prevent css-loader from trying to bundle /images/... absolute URLs.
     // They are served directly from the public/ folder at runtime.
