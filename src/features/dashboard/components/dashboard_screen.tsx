@@ -394,7 +394,7 @@ const DashboardScreen = () => {
                           </span>
                           <Chip className="w-fit mt-0.5 bg-gray-100">
                             <Chip.Label className="text-[11px] text-gray-500">
-                              กล้อง · ฉะเชิงเทรา
+                              กล้อง · ปทุมธานี
                             </Chip.Label>
                           </Chip>
                         </Column>
