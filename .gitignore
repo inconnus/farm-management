@@ -6,6 +6,9 @@
 # Dist
 node_modules
 dist/
+# อย่า ignore SDK ของกล้อง Hik (เดิมอยู่ใต้ public/hik-sdk/dist ซึ่งโดน rule ด้านบน)
+!public/hik-sdk/
+!public/hik-sdk/**
 
 # Profile
 .rspack-profile-*/
