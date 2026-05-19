@@ -17,8 +17,8 @@ export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
   {
     id: 'mock-cam-001',
     name: 'กล้องทดสอบ',
-    lat: 12.5352,
-    lng: 101.4918,
+    lat: 14.018403702213348, 
+    lng: 100.76592873970121,
     device_type: 'camera',
     farm_id: '00000000-0000-0000-0000-000000000001',
     is_active: true,
@@ -37,8 +37,8 @@ export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
   {
     id: 'mock-cam-002',
     name: 'กล้องทดสอบ2',
-    lat: 14.121693, 
-    lng: 100.774481,
+    lat: 14.018403702213348, 
+    lng: 100.76592873970121,
     device_type: 'camera',
     farm_id: '00000000-0000-0000-0000-000000000001',
     is_active: true,
