@@ -47,8 +47,16 @@ declare global {
     HPPUIKitPlayer?: new (
       options: HPPUIKitPlayerOptions,
     ) => HPPUIKitPlayerInstance;
-    JSPlugin?: unknown;
-    jQuery?: unknown;
+    JSPlugin?: new (options: Record<string, unknown>) => {
+      JS_Play: (...args: unknown[]) => unknown;
+      JS_Stop: (index: number) => unknown;
+      JS_Resize: (w: number | string, h: number | string) => unknown;
+      JS_SetWindowControlCallback: (callbacks: Record<string, unknown>) => void;
+      JS_DestroyWorker: () => unknown;
+    };
+    jQuery?: {
+      ajax: (options: Record<string, unknown>) => void;
+    };
   }
 }
 
