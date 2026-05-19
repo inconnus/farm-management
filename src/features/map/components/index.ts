@@ -5,7 +5,9 @@ export type {
   TaskTabInfiniteProps,
   TeamMember,
 } from '../types';
-export type { CameraData } from './CameraMarker';
+export type { CameraData, CameraPlayerMode } from './CameraMarker';
+export type { HikCameraParams } from '../types/hikUIKit';
+export { HikUIKitPlayer } from './HikUIKitPlayer';
 export {
   CameraMarker,
   CameraMarkerFace,

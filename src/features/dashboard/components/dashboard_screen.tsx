@@ -1,30 +1,37 @@
-import { Row } from '@app/layout';
+import { Column, Row } from '@app/layout';
+import { MOCK_DASHBOARD_CAMERAS } from '@features/dashboard/data/mockCameras';
 import {
   useIOTDevicesQuery,
   useIOTTelemetryQueries,
   useLandsQueries,
 } from '@features/dashboard/hooks';
 import {
+  CameraMarker,
   MapMarkerMount,
   MapPolygonMount,
   PolygonMarker,
 } from '@features/map/components';
 import { TaskLabel } from '@features/map/components/TaskLabel';
-import { Button, Separator } from '@heroui/react';
+import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
+import { Button, Chip, Separator, Tabs } from '@heroui/react';
 import { mapInstanceAtom } from '@shared/store/mapStore';
 import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
 import { SidebarNav, type SidebarPage } from '@shared/ui/SidebarNav';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import {
+  CctvIcon,
+  ChevronRight,
   MapPinIcon,
   SearchIcon,
   SproutIcon,
   ThermometerIcon,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { GlowingPin } from './markers/glowing_pin';
 import { SummaryModal } from './SummaryModal';
+
+type DashboardDeviceTab = 'sensors' | 'cameras';
 
 const LandTypeColor: Record<string, string> = {
   แหล่งน้ำที่ใช้รดพืช: 'rgb(75, 216, 255)',
@@ -66,6 +73,7 @@ const DashboardScreen = () => {
 
   const { deviceId, orgSlug } = useParams();
   const map = useAtomValue(mapInstanceAtom);
+  const setDevicePopup = useSetAtom(devicePopupAtom);
   const navigate = useNavigate();
   const [closePopupSignal, setClosePopupSignal] = useState(0);
   const [openPopupIdSignal, setOpenPopupIdSignal] = useState<{
@@ -75,6 +83,20 @@ const DashboardScreen = () => {
   const prevDeviceIdRef = useRef<string | undefined>(undefined);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deviceTab, setDeviceTab] = useState<DashboardDeviceTab>('sensors');
+
+  const onDeviceTabChange = useCallback(
+    (key: string | number | null) => {
+      if (key !== 'sensors' && key !== 'cameras') return;
+      setDeviceTab(key);
+      setDevicePopup(null);
+      setClosePopupSignal((n) => n + 1);
+      if (key === 'cameras' && deviceId) {
+        navigate(`/${orgSlug}/dashboard`);
+      }
+    },
+    [deviceId, navigate, orgSlug, setDevicePopup],
+  );
 
   const filteredDevices = useMemo(() => {
     if (!iotDevices) return [];
@@ -89,6 +111,16 @@ const DashboardScreen = () => {
         (d.tambon?.toLowerCase() || '').includes(lower),
     );
   }, [iotDevices, searchTerm]);
+
+  const filteredCameras = useMemo(() => {
+    if (!searchTerm) return MOCK_DASHBOARD_CAMERAS;
+    const lower = searchTerm.toLowerCase();
+    return MOCK_DASHBOARD_CAMERAS.filter(
+      (c) =>
+        c.name.toLowerCase().includes(lower) ||
+        c.id.toLowerCase().includes(lower),
+    );
+  }, [searchTerm]);
 
   const dashboardPolygons = useMemo(() => {
     const polygons: Array<{
@@ -170,7 +202,7 @@ const DashboardScreen = () => {
   }, [deviceId]);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || deviceTab !== 'sensors') return;
     if (deviceId) {
       const device = iotDevices?.find((device) => device._id === deviceId);
       if (device) {
@@ -185,7 +217,7 @@ const DashboardScreen = () => {
     } else {
       map.flyTo(DEFAULT_MAP_OVERVIEW);
     }
-  }, [map, deviceId, iotDevices]);
+  }, [map, deviceId, iotDevices, deviceTab]);
 
   // ─── Pages ───────────────────────────────────────────────────
 
@@ -195,7 +227,7 @@ const DashboardScreen = () => {
         key: 'list',
         path: '',
         render: () => (
-          <div className="flex flex-col p-3 max-h-[calc(90vh)]">
+          <div className="flex flex-col p-3 max-h-[calc(90vh)] overflow-hidden">
             <div className="px-3 pt-1 pb-2 flex items-center justify-center ">
               <span className="text-[17px] font-semibold text-gray-900">
                 อุปกรณ์ทั้งหมด ({iotDevices?.length})
@@ -212,13 +244,36 @@ const DashboardScreen = () => {
               />
             </Row>
             <Separator className="my-2" />
-            <div className="flex-1 overflow-y-auto min-h-0 pr-2 -mr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {filteredDevices?.length === 0 && (
-                <div className="text-center py-6 text-gray-400 text-sm">
-                  ไม่พบอุปกรณ์ที่ค้นหา
-                </div>
-              )}
-              {filteredDevices?.map((device, index) => {
+
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <Tabs
+                selectedKey={deviceTab}
+                onSelectionChange={onDeviceTabChange}
+                className="w-full max-w-md flex-1 min-h-0 flex flex-col"
+              >
+                <Tabs.ListContainer className="shrink-0">
+                  <Tabs.List aria-label="อุปกรณ์" className="bg-black/5">
+                    <Tabs.Tab id="sensors">
+                      เสาร์เซ็นเซอร์
+                      <Tabs.Indicator />
+                    </Tabs.Tab>
+                    <Tabs.Tab id="cameras">
+                      กล้อง
+                      <Tabs.Indicator />
+                    </Tabs.Tab>
+                  </Tabs.List>
+                </Tabs.ListContainer>
+                <Tabs.Panel
+                  id="sensors"
+                  className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
+                >
+                  <div className="flex-1 overflow-y-auto min-h-0 pr-2 -mr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {filteredDevices?.length === 0 && (
+                      <div className="text-center py-6 text-gray-400 text-sm">
+                        ไม่พบอุปกรณ์ที่ค้นหา
+                      </div>
+                    )}
+                    {filteredDevices?.map((device, index) => {
                 const telemetry =
                   telemetryMap.get(device.appIotId) || device.telemetry;
                 return (
@@ -293,20 +348,73 @@ const DashboardScreen = () => {
                     )}
                   </React.Fragment>
                 );
-              })}
-            </div>
-            {/* Overview Button at the bottom */}
-            {iotDevices && iotDevices.length > 0 && (
-              <div className="mt-2 ">
-                <Button
-                  className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
-                  onPress={() => setIsSummaryModalOpen(true)}
-                  size="lg"
+                    })}
+                  </div>
+                  {iotDevices && iotDevices.length > 0 && (
+                    <div className="shrink-0 pt-2">
+                      <Button
+                        className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
+                        onPress={() => setIsSummaryModalOpen(true)}
+                        size="lg"
+                      >
+                        ดูภาพรวมอุปกรณ์ (Overview)
+                      </Button>
+                    </div>
+                  )}
+                </Tabs.Panel>
+                <Tabs.Panel
+                  id="cameras"
+                  className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
                 >
-                  ดูภาพรวมอุปกรณ์ (Overview)
-                </Button>
-              </div>
-            )}
+                  <Column className="flex-1 min-h-0 overflow-y-auto gap-1 camera-list-scroll pr-2 -mr-2">
+                    {filteredCameras.map((cam) => (
+                      <Row
+                        key={cam.id}
+                        onClick={() => {
+                          map?.flyTo({
+                            center: [cam.lng, cam.lat],
+                            zoom: 17,
+                            duration: 800,
+                          });
+                          setDevicePopup({
+                            type: 'camera',
+                            lngLat: [cam.lng, cam.lat],
+                            camera: cam,
+                          });
+                        }}
+                        className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+                      >
+                        <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center bg-gray-100 border border-gray-200 relative">
+                          <CctvIcon size={16} className="text-gray-600" />
+                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
+                        </div>
+                        <Column className="ml-2.5 min-w-0">
+                          <span className="font-medium text-sm truncate">
+                            {cam.name}
+                          </span>
+                          <Chip className="w-fit mt-0.5 bg-gray-100">
+                            <Chip.Label className="text-[11px] text-gray-500">
+                              กล้อง · ฉะเชิงเทรา
+                            </Chip.Label>
+                          </Chip>
+                        </Column>
+                        <ChevronRight
+                          size={14}
+                          className="text-gray-300 ml-auto shrink-0"
+                        />
+                      </Row>
+                    ))}
+                    {filteredCameras.length === 0 && (
+                      <span className="text-center text-gray-400 py-4 text-sm">
+                        {searchTerm
+                          ? 'ไม่พบกล้องที่ค้นหา'
+                          : 'ยังไม่มีกล้อง'}
+                      </span>
+                    )}
+                  </Column>
+                </Tabs.Panel>
+              </Tabs>
+            </div>
           </div>
         ),
       },
@@ -317,7 +425,13 @@ const DashboardScreen = () => {
       iotDevices,
       searchTerm,
       telemetryMap,
+      deviceTab,
+      onDeviceTabChange,
+      filteredCameras,
+      map,
       navigate,
+      orgSlug,
+      setDevicePopup,
       setOpenPopupIdSignal,
       setIsSummaryModalOpen,
     ],
@@ -332,8 +446,9 @@ const DashboardScreen = () => {
         pages={pages}
         className="absolute right-0 pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
       >
-        {/* Map markers */}
-        {filteredDevices?.map((device) => {
+        {/* Map markers — สลับตามแท็บ */}
+        {deviceTab === 'sensors' &&
+          filteredDevices?.map((device) => {
           const telemetry = telemetryMap.get(device.appIotId) || device.telemetry;
           return (
             <MapMarkerMount
@@ -455,7 +570,22 @@ const DashboardScreen = () => {
               <GlowingPin isOnline={!!telemetry} />
             </MapMarkerMount>
           );
-        })}
+          })}
+
+        {deviceTab === 'cameras' &&
+          filteredCameras.map((cam) => (
+            <CameraMarker
+              key={cam.id}
+              camera={cam}
+              onClick={(c) =>
+                setDevicePopup({
+                  type: 'camera',
+                  lngLat: [c.lng, c.lat],
+                  camera: c,
+                })
+              }
+            />
+          ))}
 
         {/* Polygon markers */}
         {dashboardPolygons.map((poly) => (

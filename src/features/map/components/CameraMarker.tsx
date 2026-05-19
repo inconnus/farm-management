@@ -1,25 +1,61 @@
 import type { DbDevice } from '@features/devices/hooks/useDevicesQuery';
+import type { HikCameraParams } from '@features/map/types/hikUIKit';
 import { CctvIcon } from 'lucide-react';
 import { MapMarkerMount } from './MapMarkerMount';
+
+export type CameraPlayerMode = 'hik' | 'default';
 
 export type CameraData = {
   id: string;
   name: string;
   lat: number;
   lng: number;
+  /** `hik` = ISGP HPPUIKitPlayer, อื่นๆ = webrtc / m3u8 / stream ตามลำดับเดิม */
+  mode?: CameraPlayerMode;
+  /** พารามิเตอร์สำหรับ HPPUIKitPlayer (เมื่อ mode === 'hik') */
+  hik?: HikCameraParams;
+  /** flag จาก device.config ว่าเป็นกล้อง Hikvision (ใช้ EzvizHlsPlayer) */
+  isHikvision?: boolean;
   webrtcUrl?: string;
   /** HLS playlist (.m3u8) — เก็บใน device.config เป็น `m3u8_url` */
   m3u8Url?: string;
   streamUrl?: string;
 };
 
+function readHikParams(config: Record<string, unknown>): HikCameraParams | undefined {
+  const accessToken =
+    (config.access_token as string) || (config.accessToken as string);
+  const deviceSerial =
+    (config.device_serial as string) || (config.deviceSerial as string);
+  if (!accessToken || !deviceSerial) return undefined;
+
+  return {
+    accessToken,
+    deviceSerial,
+    channelNo:
+      (config.channel_no as number | string) ??
+      (config.channelNo as number | string) ??
+      1,
+    code: (config.code as string) || '',
+    quality: (config.quality as number) ?? 1,
+    method: (config.method as number) ?? 2,
+  };
+}
+
 export function toCameraData(device: DbDevice): CameraData {
   const config = (device.config ?? {}) as Record<string, unknown>;
+  const mode =
+    config.mode === 'hik' ? ('hik' as const) : undefined;
+  const hik = mode === 'hik' ? readHikParams(config) : undefined;
+
   return {
     id: device.id,
     name: device.name,
     lat: device.lat,
     lng: device.lng,
+    mode,
+    hik,
+    isHikvision: (config.is_hikvision as boolean) || undefined,
     webrtcUrl: (config.webrtc_url as string) || undefined,
     m3u8Url: (config.m3u8_url as string) || undefined,
     streamUrl: (config.stream_url as string) || undefined,

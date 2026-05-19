@@ -13,6 +13,7 @@
     "test:watch": "rstest --watch"
   },
   "dependencies": {
+    "@ezuikit/player-hls": "0.1.5",
     "@gravity-ui/icons": "^2.18.0",
     "@heroui/react": "^3.0.1",
     "@heroui/styles": "^3.0.1",

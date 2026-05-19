@@ -3,7 +3,13 @@ import { Card } from '@heroui/react';
 import { CctvIcon } from 'lucide-react';
 import ReactPlayer from 'react-player';
 import type { CameraData } from './CameraMarker';
+import { EzvizHlsPlayer } from './EzvizHlsPlayer';
+import { HikUIKitPlayer } from './HikUIKitPlayer';
 import { WebRTCPlayer } from './WebRTCPlayer';
+
+function isM3u8Url(u: string) {
+  return /\.m3u8(\?|$)/i.test(u);
+}
 
 type CameraPopupProps = {
   camera: CameraData;
@@ -12,10 +18,26 @@ type CameraPopupProps = {
 };
 
 function CameraVideoBody({ camera, url }: CameraPopupProps) {
+  if (camera.mode === 'hik') {
+    if (!camera.hik?.accessToken || !camera.hik?.deviceSerial) {
+      return (
+        <Column className="items-center justify-center h-full w-full gap-3 text-gray-400 bg-gray-900">
+          <CctvIcon size={36} />
+          <span className="text-sm text-center px-4">
+            ตั้งค่า Hik ไม่ครบ (ต้องมี accessToken, deviceSerial)
+          </span>
+        </Column>
+      );
+    }
+    return <HikUIKitPlayer params={camera.hik} className="h-full w-full" />;
+  }
   if (camera.webrtcUrl) {
     return <WebRTCPlayer url={camera.webrtcUrl} />;
   }
   if (camera.m3u8Url) {
+    if (camera.isHikvision) {
+      return <EzvizHlsPlayer url={camera.m3u8Url} className="h-full w-full" />;
+    }
     return (
       <ReactPlayer
         src={camera.m3u8Url}
@@ -38,6 +60,9 @@ function CameraVideoBody({ camera, url }: CameraPopupProps) {
     );
   }
   if (url) {
+    if (camera.isHikvision && isM3u8Url(url)) {
+      return <EzvizHlsPlayer url={url} className="h-full w-full" />;
+    }
     return (
       <ReactPlayer src={url} playing controls width="100%" height="100%" />
     );
