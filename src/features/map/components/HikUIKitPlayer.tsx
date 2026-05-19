@@ -1,6 +1,6 @@
 import { HIK_PLUGIN_PATH, loadHikSdk } from '@features/map/lib/loadHikSdk';
 import type { HikCameraParams } from '@features/map/types/hikUIKit';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 type HikUIKitPlayerProps = {
   params: HikCameraParams;
@@ -16,11 +16,8 @@ const CONNECT_MAX_FRAMES = 120;
  * ต้องมี assets ใน /public/hik-sdk/
  */
 export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
-  const containerIdRef = useRef<string | null>(null);
-  if (containerIdRef.current === null) {
-    containerIdRef.current = `hik-uikit-${crypto.randomUUID()}`;
-  }
-  const containerId = containerIdRef.current;
+  const reactId = useId().replace(/:/g, '');
+  const containerId = `hik-uikit-${reactId}`;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<InstanceType<NonNullable<typeof window.HPPUIKitPlayer>> | null>(
@@ -34,6 +31,14 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
     let rafId = 0;
     let attempts = 0;
     let resizeObserver: ResizeObserver | undefined;
+    let playRafId = 0;
+    let hideLoadingTimer = 0;
+
+    const clearLoading = () => {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    };
 
     const mountPlayer = async () => {
       const node = containerRef.current;
@@ -57,10 +62,6 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
         const w = Math.max(el.clientWidth, MIN_W);
         const h = Math.max(el.clientHeight, MIN_H);
 
-        playerRef.current?.stop?.();
-        playerRef.current?.destroy?.();
-        playerRef.current = null;
-
         if (!window.HPPUIKitPlayer) {
           throw new Error('HPPUIKitPlayer is not available');
         }
@@ -80,19 +81,42 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
           pluginErrorHandler: (iWndIndex, iErrorCode, oError) => {
             console.error('[HikUIKit]', iWndIndex, iErrorCode, oError);
             if (!cancelled) {
+              clearLoading();
               setError(`ข้อผิดพลาดกล้อง (${iErrorCode})`);
             }
           },
           performanceLack: () => {
             console.warn('[HikUIKit] Insufficient performance');
           },
+          onStreamStart: () => {
+            if (!cancelled) {
+              clearLoading();
+              setError(null);
+            }
+          },
+          onFirstFrame: () => {
+            if (!cancelled) {
+              clearLoading();
+              setError(null);
+            }
+          },
+          onPlayError: (message) => {
+            if (!cancelled) {
+              clearLoading();
+              setError(message);
+            }
+          },
         });
 
-        playerRef.current.realplay();
-        if (!cancelled) {
-          setLoading(false);
-          setError(null);
-        }
+        hideLoadingTimer = window.setTimeout(clearLoading, 5000);
+
+        // รอ DOM + canvas ของ plugin พร้อมก่อน realplay (สำคัญเมื่อเปิด popup ซ้ำ)
+        playRafId = requestAnimationFrame(() => {
+          playRafId = requestAnimationFrame(() => {
+            if (cancelled || !playerRef.current) return;
+            playerRef.current.realplay();
+          });
+        });
 
         resizeObserver = new ResizeObserver(() => {
           const target = containerRef.current;
@@ -115,9 +139,15 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
+      cancelAnimationFrame(playRafId);
+      window.clearTimeout(hideLoadingTimer);
       resizeObserver?.disconnect();
-      playerRef.current?.stop?.();
-      playerRef.current?.destroy?.();
+      // ปิด popup: หยุดสตรีมเท่านั้น — อย่า destroy worker ที่นี่ (ทำให้เปิดซ้ำไม่ได้)
+      try {
+        playerRef.current?.stop?.();
+      } catch {
+        /* ignore */
+      }
       playerRef.current = null;
     };
   }, [
@@ -138,7 +168,7 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
         className="h-full w-full min-h-[180px] bg-[#4C4B4B]"
       />
       {loading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-sm">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-white text-sm pointer-events-none">
           กำลังเชื่อมต่อกล้อง…
         </div>
       )}

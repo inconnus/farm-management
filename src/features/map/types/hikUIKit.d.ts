@@ -21,6 +21,10 @@ export type HPPUIKitPlayerOptions = HikCameraParams & {
     oError: unknown,
   ) => void;
   performanceLack?: () => void;
+  onFirstFrame?: () => void;
+  /** เรียกเมื่อ API คืน URL และสั่ง JS_Play แล้ว */
+  onStreamStart?: () => void;
+  onPlayError?: (message: string) => void;
 };
 
 export type HPPUIKitPlayerInstance = {

@@ -16,7 +16,7 @@ export const HIK_SDK_MOCK_CONFIG = {
 export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
   {
     id: 'mock-cam-001',
-    name: 'กล้องทดสอบ - แปลงหลัก (Hik)',
+    name: 'กล้องทดสอบ',
     lat: 12.5352,
     lng: 101.4918,
     device_type: 'camera',
@@ -36,7 +36,7 @@ export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
   },
   {
     id: 'mock-cam-002',
-    name: 'กล้องทดสอบ2 - แปลงหลัก (Hik)',
+    name: 'กล้องทดสอบ2',
     lat: 14.121693, 
     lng: 100.774481,
     device_type: 'camera',

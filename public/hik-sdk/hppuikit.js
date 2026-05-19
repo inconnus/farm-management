@@ -15,6 +15,115 @@ var API_LIVE_ADDRESS =
 var API_TALK_URL =
   'https://isgp.hik-partner.com/api/lapp/live/talk/url';
 
+/** หยุดสตรีม + ทำลาย plugin instance (ใช้ก่อนสร้างใหม่) */
+function teardownPlugin() {
+  if (!oPlugin) {
+    iWind = 0;
+    return;
+  }
+  try {
+    oPlugin.JS_Stop(iWind);
+  } catch (e) {
+    /* ignore */
+  }
+  try {
+    oPlugin.JS_DestroyWorker();
+  } catch (e) {
+    /* ignore */
+  }
+  oPlugin = null;
+  iWind = 0;
+}
+
+function decodeTicket(ticket) {
+  if (!ticket) {
+    return '';
+  }
+  try {
+    return window.atob(ticket);
+  } catch (e) {
+    return ticket;
+  }
+}
+
+function notifyPlayError(p, message) {
+  if (p.onPlayError) {
+    p.onPlayError(message);
+  } else {
+    console.error('[HPPUIKit]', message);
+  }
+}
+
+function markStreamStarted(p) {
+  if (p.onStreamStart) {
+    p.onStreamStart();
+  }
+}
+
+/** เรียก JS_Play และกลืน promise reject ว่างจาก jsPlugin */
+function invokeJSPlay(playArgs, p) {
+  if (!oPlugin) {
+    if (p) {
+      notifyPlayError(p, 'JSPlugin ยังไม่พร้อม');
+    }
+    return null;
+  }
+  var result;
+  try {
+    result = oPlugin.JS_Play.apply(oPlugin, playArgs);
+  } catch (e) {
+    if (p) {
+      notifyPlayError(p, e && e.message ? e.message : 'JS_Play failed');
+    }
+    return null;
+  }
+  if (result && typeof result.then === 'function') {
+    return result.catch(function (err) {
+      if (err !== undefined) {
+        console.warn('[HPPUIKit] JS_Play promise:', err);
+      }
+      return undefined;
+    });
+  }
+  return result;
+}
+
+function startPlayFromResponse(p, res, extraPlayArgs) {
+  if (!res || !res.data || !res.data.url) {
+    notifyPlayError(
+      p,
+      (res && (res.msg || res.message)) ||
+        'API ไม่คืน URL สตรีม (ตรวจ token / device / code)',
+    );
+    return;
+  }
+
+  var playOpts = {
+    playURL: res.data.url,
+    ezuikit: true,
+    env: EZVIZ_ENV,
+    accessToken: decodeTicket(res.data.ticket),
+  };
+
+  var args = [res.data.url, playOpts, iWind];
+  if (extraPlayArgs && extraPlayArgs.length) {
+    args = args.concat(extraPlayArgs);
+  }
+
+  var pending = invokeJSPlay(args, p);
+  if (pending && typeof pending.then === 'function') {
+    pending
+      .then(function () {
+        markStreamStarted(p);
+      })
+      .catch(function () {
+        markStreamStarted(p);
+      });
+  } else {
+    markStreamStarted(p);
+  }
+}
+
 /**
  * สร้าง/รีเซ็ต JSPlugin และผูก window callbacks
  * @param {Object} params
@@ -26,9 +135,7 @@ var API_TALK_URL =
  * @param {Function} [params.performanceLack]
  */
 function initPlugin(params) {
-  if (oPlugin) {
-    oPlugin = null;
-  }
+  teardownPlugin();
 
   oPlugin = new JSPlugin({
     szId: params.wndId,
@@ -59,7 +166,11 @@ function initPlugin(params) {
     windowEventOut: function () {},
     windowEventUp: function () {},
     windowFullCcreenChange: function () {}, // ชื่อเดิมจาก SDK (สะกดผิด FullCcreen)
-    firstFrameDisplay: function () {},
+    firstFrameDisplay: function () {
+      if (params.onFirstFrame) {
+        params.onFirstFrame();
+      }
+    },
 
     performanceLack: function () {
       if (params.performanceLack) {
@@ -112,23 +223,14 @@ var HPPUIKitPlayer = (function () {
         quality: p.quality || 1,
       }),
       success: function (res) {
-        if (!res.data) {
-          return;
-        }
-
-        oPlugin.JS_Play(
-          res.data.url,
-          {
-            playURL: res.data.url,
-            ezuikit: true,
-            env: EZVIZ_ENV,
-            accessToken: window.atob(res.data.ticket),
-          },
-          iWind
-        );
+        startPlayFromResponse(p, res);
       },
-      error: function (xhr, status, err) {
-        console.log(xhr, status, err);
+      error: function (xhr) {
+        var msg =
+          (xhr.responseJSON && (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
+          xhr.statusText ||
+          'เรียก API สตรีมไม่สำเร็จ';
+        notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
       },
     });
   };
@@ -166,25 +268,14 @@ var HPPUIKitPlayer = (function () {
         type: p.method,
       }),
       success: function (res) {
-        if (!res.data) {
-          return;
-        }
-
-        oPlugin.JS_Play(
-          res.data.url,
-          {
-            playURL: res.data.url,
-            ezuikit: true,
-            env: EZVIZ_ENV,
-            accessToken: window.atob(res.data.ticket),
-          },
-          iWind,
-          startMode,
-          endMode
-        );
+        startPlayFromResponse(p, res, [startMode, endMode]);
       },
-      error: function (xhr, status, err) {
-        console.log(xhr, status, err);
+      error: function (xhr) {
+        var msg =
+          (xhr.responseJSON && (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
+          xhr.statusText ||
+          'เรียก API playback ไม่สำเร็จ';
+        notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
       },
     });
   };
@@ -230,6 +321,9 @@ var HPPUIKitPlayer = (function () {
   };
 
   HPPUIKitPlayer.prototype.stop = function () {
+    if (!oPlugin) {
+      return;
+    }
     return oPlugin.JS_Stop(iWind);
   };
 
@@ -274,7 +368,7 @@ var HPPUIKitPlayer = (function () {
   };
 
   HPPUIKitPlayer.prototype.destroy = function () {
-    return oPlugin.JS_DestroyWorker();
+    teardownPlugin();
   };
 
   return HPPUIKitPlayer;

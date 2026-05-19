@@ -29,7 +29,13 @@ function CameraVideoBody({ camera, url }: CameraPopupProps) {
         </Column>
       );
     }
-    return <HikUIKitPlayer params={camera.hik} className="h-full w-full" />;
+    return (
+      <HikUIKitPlayer
+        key={`${camera.id}-${camera.hik.deviceSerial}`}
+        params={camera.hik}
+        className="h-full w-full"
+      />
+    );
   }
   if (camera.webrtcUrl) {
     return <WebRTCPlayer url={camera.webrtcUrl} />;
