@@ -31,7 +31,8 @@ function CameraVideoBody({ camera, url }: CameraPopupProps) {
     }
     return (
       <HikUIKitPlayer
-        key={`${camera.id}-${camera.hik.deviceSerial}`}
+        key={camera.id}
+        instanceKey={camera.id}
         params={camera.hik}
         className="h-full w-full"
       />

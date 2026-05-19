@@ -5,6 +5,11 @@
 
 var oPlugin = null;
 var iWind = 0;
+/** session เปลี่ยนเมื่อ destroy — กัน ajax/play ค้างจากรอบก่อน */
+var activeSession = 0;
+/** คิว teardown → init ไม่ชนกัน (สำคัญบน prod เมื่อเปิด popup ซ้ำ) */
+var pluginLifecycle = Promise.resolve();
+var TEARDOWN_GAP_MS = 200;
 
 var EZVIZ_ENV = {
   domain: 'https://isgpopen.ezvizlife.com',
@@ -15,24 +20,56 @@ var API_LIVE_ADDRESS =
 var API_TALK_URL =
   'https://isgp.hik-partner.com/api/lapp/live/talk/url';
 
-/** หยุดสตรีม + ทำลาย plugin instance (ใช้ก่อนสร้างใหม่) */
-function teardownPlugin() {
-  if (!oPlugin) {
-    iWind = 0;
-    return;
+function swallowPluginResult(result) {
+  if (result && typeof result.then === 'function') {
+    return result.catch(function (err) {
+      if (err !== undefined) {
+        console.warn('[HPPUIKit] plugin async:', err);
+      }
+    });
+  }
+  return Promise.resolve();
+}
+
+function callPlugin(plugin, method, args) {
+  if (!plugin) {
+    return Promise.resolve();
+  }
+  var fn = plugin[method];
+  if (typeof fn !== 'function') {
+    return Promise.resolve();
   }
   try {
-    oPlugin.JS_Stop(iWind);
+    return swallowPluginResult(fn.apply(plugin, args || []));
   } catch (e) {
-    /* ignore */
+    return Promise.resolve();
   }
-  try {
-    oPlugin.JS_DestroyWorker();
-  } catch (e) {
-    /* ignore */
-  }
+}
+
+function teardownPluginAsync() {
+  var plugin = oPlugin;
+  var wind = iWind;
   oPlugin = null;
   iWind = 0;
+  if (!plugin) {
+    return Promise.resolve();
+  }
+  return callPlugin(plugin, 'JS_Stop', [wind])
+    .then(function () {
+      return callPlugin(plugin, 'JS_DestroyWorker', []);
+    })
+    .then(function () {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, TEARDOWN_GAP_MS);
+      });
+    });
+}
+
+function scheduleTeardown() {
+  pluginLifecycle = pluginLifecycle
+    .then(teardownPluginAsync)
+    .catch(function () {});
+  return pluginLifecycle;
 }
 
 function decodeTicket(ticket) {
@@ -68,24 +105,12 @@ function invokeJSPlay(playArgs, p) {
     }
     return null;
   }
-  var result;
-  try {
-    result = oPlugin.JS_Play.apply(oPlugin, playArgs);
-  } catch (e) {
+  return callPlugin(oPlugin, 'JS_Play', playArgs).catch(function (e) {
     if (p) {
       notifyPlayError(p, e && e.message ? e.message : 'JS_Play failed');
     }
-    return null;
-  }
-  if (result && typeof result.then === 'function') {
-    return result.catch(function (err) {
-      if (err !== undefined) {
-        console.warn('[HPPUIKit] JS_Play promise:', err);
-      }
-      return undefined;
-    });
-  }
-  return result;
+    return undefined;
+  });
 }
 
 function startPlayFromResponse(p, res, extraPlayArgs) {
@@ -135,48 +160,48 @@ function startPlayFromResponse(p, res, extraPlayArgs) {
  * @param {Function} [params.performanceLack]
  */
 function initPlugin(params) {
-  teardownPlugin();
+  return scheduleTeardown().then(function () {
+    oPlugin = new JSPlugin({
+      szId: params.wndId,
+      iWidth: params.width || 600,
+      iHeight: params.height || 400,
+      iMaxSplit: 1,
+      iCurrentSplit: 1,
+      szBasePath: params.pluginPath,
+      oStyle: {
+        border: '#343434',
+        borderSelect: 'red',
+        background: '#4C4B4B',
+      },
+    });
 
-  oPlugin = new JSPlugin({
-    szId: params.wndId,
-    iWidth: params.width || 600,
-    iHeight: params.height || 400,
-    iMaxSplit: 1,
-    iCurrentSplit: 1,
-    szBasePath: params.pluginPath,
-    oStyle: {
-      border: '#343434',
-      borderSelect: 'red',
-      background: '#4C4B4B',
-    },
-  });
+    oPlugin.JS_SetWindowControlCallback({
+      windowEventSelect: function (windowIndex) {
+        iWind = windowIndex;
+      },
 
-  oPlugin.JS_SetWindowControlCallback({
-    windowEventSelect: function (windowIndex) {
-      iWind = windowIndex;
-    },
+      pluginErrorHandler: function (iWndIndex, iErrorCode, oError) {
+        if (params.pluginErrorHandler) {
+          params.pluginErrorHandler(iWndIndex, iErrorCode, oError);
+        }
+      },
 
-    pluginErrorHandler: function (iWndIndex, iErrorCode, oError) {
-      if (params.pluginErrorHandler) {
-        params.pluginErrorHandler(iWndIndex, iErrorCode, oError);
-      }
-    },
+      windowEventOver: function () {},
+      windowEventOut: function () {},
+      windowEventUp: function () {},
+      windowFullCcreenChange: function () {}, // ชื่อเดิมจาก SDK (สะกดผิด FullCcreen)
+      firstFrameDisplay: function () {
+        if (params.onFirstFrame) {
+          params.onFirstFrame();
+        }
+      },
 
-    windowEventOver: function () {},
-    windowEventOut: function () {},
-    windowEventUp: function () {},
-    windowFullCcreenChange: function () {}, // ชื่อเดิมจาก SDK (สะกดผิด FullCcreen)
-    firstFrameDisplay: function () {
-      if (params.onFirstFrame) {
-        params.onFirstFrame();
-      }
-    },
-
-    performanceLack: function () {
-      if (params.performanceLack) {
-        params.performanceLack();
-      }
-    },
+      performanceLack: function () {
+        if (params.performanceLack) {
+          params.performanceLack();
+        }
+      },
+    });
   });
 }
 
@@ -201,37 +226,55 @@ var HPPUIKitPlayer = (function () {
 
   function HPPUIKitPlayer(params) {
     this.params = params;
-    initPlugin(params);
+    this._session = ++activeSession;
+    this._ready = initPlugin(params);
   }
+
+  HPPUIKitPlayer.prototype.whenReady = function () {
+    return this._ready;
+  };
 
   /** สตรีมสด */
   HPPUIKitPlayer.prototype.realplay = function () {
-    var self = this;
     var p = this.params;
+    var session = this._session;
 
-    $.ajax({
-      type: 'post',
-      url: API_LIVE_ADDRESS,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + p.accessToken,
-      },
-      data: JSON.stringify({
-        deviceSerial: p.deviceSerial,
-        channelNo: p.channelNo || 1,
-        code: p.code || '',
-        quality: p.quality || 1,
-      }),
-      success: function (res) {
-        startPlayFromResponse(p, res);
-      },
-      error: function (xhr) {
-        var msg =
-          (xhr.responseJSON && (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
-          xhr.statusText ||
-          'เรียก API สตรีมไม่สำเร็จ';
-        notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
-      },
+    this._ready.then(function () {
+      if (session !== activeSession || !oPlugin) {
+        return;
+      }
+
+      $.ajax({
+        type: 'post',
+        url: API_LIVE_ADDRESS,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + p.accessToken,
+        },
+        data: JSON.stringify({
+          deviceSerial: p.deviceSerial,
+          channelNo: p.channelNo || 1,
+          code: p.code || '',
+          quality: p.quality || 1,
+        }),
+        success: function (res) {
+          if (session !== activeSession || !oPlugin) {
+            return;
+          }
+          startPlayFromResponse(p, res);
+        },
+        error: function (xhr) {
+          if (session !== activeSession) {
+            return;
+          }
+          var msg =
+            (xhr.responseJSON &&
+              (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
+            xhr.statusText ||
+            'เรียก API สตรีมไม่สำเร็จ';
+          notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
+        },
+      });
     });
   };
 
@@ -248,35 +291,48 @@ var HPPUIKitPlayer = (function () {
     startTime,
     stopTime
   ) {
-    var self = this;
     var p = this.params;
+    var session = this._session;
 
-    $.ajax({
-      type: 'post',
-      url: API_LIVE_ADDRESS,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + p.accessToken,
-      },
-      data: JSON.stringify({
-        deviceSerial: p.deviceSerial,
-        channelNo: p.channelNo || 1,
-        code: p.code || '',
-        quality: p.quality || 1,
-        startTime: startTime || '',
-        stopTime: stopTime || '',
-        type: p.method,
-      }),
-      success: function (res) {
-        startPlayFromResponse(p, res, [startMode, endMode]);
-      },
-      error: function (xhr) {
-        var msg =
-          (xhr.responseJSON && (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
-          xhr.statusText ||
-          'เรียก API playback ไม่สำเร็จ';
-        notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
-      },
+    this._ready.then(function () {
+      if (session !== activeSession || !oPlugin) {
+        return;
+      }
+
+      $.ajax({
+        type: 'post',
+        url: API_LIVE_ADDRESS,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + p.accessToken,
+        },
+        data: JSON.stringify({
+          deviceSerial: p.deviceSerial,
+          channelNo: p.channelNo || 1,
+          code: p.code || '',
+          quality: p.quality || 1,
+          startTime: startTime || '',
+          stopTime: stopTime || '',
+          type: p.method,
+        }),
+        success: function (res) {
+          if (session !== activeSession || !oPlugin) {
+            return;
+          }
+          startPlayFromResponse(p, res, [startMode, endMode]);
+        },
+        error: function (xhr) {
+          if (session !== activeSession) {
+            return;
+          }
+          var msg =
+            (xhr.responseJSON &&
+              (xhr.responseJSON.msg || xhr.responseJSON.message)) ||
+            xhr.statusText ||
+            'เรียก API playback ไม่สำเร็จ';
+          notifyPlayError(p, msg + (xhr.status ? ' (' + xhr.status + ')' : ''));
+        },
+      });
     });
   };
 
@@ -322,9 +378,9 @@ var HPPUIKitPlayer = (function () {
 
   HPPUIKitPlayer.prototype.stop = function () {
     if (!oPlugin) {
-      return;
+      return Promise.resolve();
     }
-    return oPlugin.JS_Stop(iWind);
+    return callPlugin(oPlugin, 'JS_Stop', [iWind]);
   };
 
   HPPUIKitPlayer.prototype.openSound = function () {
@@ -368,7 +424,8 @@ var HPPUIKitPlayer = (function () {
   };
 
   HPPUIKitPlayer.prototype.destroy = function () {
-    teardownPlugin();
+    activeSession += 1;
+    return scheduleTeardown();
   };
 
   return HPPUIKitPlayer;

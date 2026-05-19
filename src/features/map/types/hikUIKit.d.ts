@@ -29,14 +29,15 @@ export type HPPUIKitPlayerOptions = HikCameraParams & {
 
 export type HPPUIKitPlayerInstance = {
   realplay: () => void;
+  whenReady?: () => Promise<void>;
   playback: (
     szStartDate: string,
     szEndDate: string,
     szStartDate1: string,
     szEndDate1: string,
   ) => void;
-  stop: () => unknown;
-  destroy: () => unknown;
+  stop: () => Promise<void>;
+  destroy: () => Promise<void>;
   resize: (width: number | string, height: number | string) => unknown;
   openSound: () => unknown;
   closeSound: () => unknown;

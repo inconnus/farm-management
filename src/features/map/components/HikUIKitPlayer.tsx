@@ -1,9 +1,11 @@
 import { HIK_PLUGIN_PATH, loadHikSdk } from '@features/map/lib/loadHikSdk';
 import type { HikCameraParams } from '@features/map/types/hikUIKit';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type HikUIKitPlayerProps = {
   params: HikCameraParams;
+  /** id คงที่ต่อกล้อง — ช่วยให้ plugin bind DOM ซ้ำได้บน prod */
+  instanceKey: string;
   className?: string;
 };
 
@@ -15,9 +17,8 @@ const CONNECT_MAX_FRAMES = 120;
  * Live preview ผ่าน Hikvision ISGP (HPPUIKitPlayer + jsPlugin)
  * ต้องมี assets ใน /public/hik-sdk/
  */
-export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
-  const reactId = useId().replace(/:/g, '');
-  const containerId = `hik-uikit-${reactId}`;
+export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlayerProps) {
+  const containerId = `hik-uikit-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<InstanceType<NonNullable<typeof window.HPPUIKitPlayer>> | null>(
@@ -67,7 +68,7 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
         }
 
         const PlayerCtor = window.HPPUIKitPlayer;
-        playerRef.current = new PlayerCtor({
+        const player = new PlayerCtor({
           wndId: containerId,
           accessToken: params.accessToken,
           width: w,
@@ -107,6 +108,10 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
             }
           },
         });
+        playerRef.current = player;
+
+        await player.whenReady?.();
+        if (cancelled || !playerRef.current) return;
 
         hideLoadingTimer = window.setTimeout(clearLoading, 5000);
 
@@ -142,16 +147,17 @@ export function HikUIKitPlayer({ params, className }: HikUIKitPlayerProps) {
       cancelAnimationFrame(playRafId);
       window.clearTimeout(hideLoadingTimer);
       resizeObserver?.disconnect();
-      // ปิด popup: หยุดสตรีมเท่านั้น — อย่า destroy worker ที่นี่ (ทำให้เปิดซ้ำไม่ได้)
-      try {
-        playerRef.current?.stop?.();
-      } catch {
-        /* ignore */
-      }
+      const player = playerRef.current;
       playerRef.current = null;
+      if (player?.destroy) {
+        void Promise.resolve(player.destroy()).catch(() => {
+          /* ignore teardown errors */
+        });
+      }
     };
   }, [
     containerId,
+    instanceKey,
     params.accessToken,
     params.deviceSerial,
     params.channelNo,
