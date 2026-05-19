@@ -2021,7 +2021,7 @@ export default [
     lng: '101.04161',
     id: 3441,
     label: 'PER-14-002',
-    name: '304 - คลองหลวงแพ่ง - ฉะเชิงเทรา',
+    name: '304 - คลองหลวงแพ่ง - ปทุมธานี',
     description: 'ทางหลวงแผ่นดินหมายเลข 304 ระหว่าง กม 65 - 66',
     site_code:
       'https://streaming2.highwaytraffic.go.th/Phase14/PER_14_002_IN.stream/playlist.m3u8',
