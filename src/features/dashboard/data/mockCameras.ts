@@ -4,7 +4,7 @@ import { toCameraData } from '@features/map/components';
 /** config ISGP + ezuikit-js — ใส่ใน farm_devices.config เมื่อ mode = hik */
 export const HIK_SDK_MOCK_CONFIG = {
   mode: 'hik',
-  access_token: 'hpc.6gkhm0Id7BkA8CN5zYBu9IkNDqEkifaA',
+  access_token: 'hpc.FIDG6RhuHrZsHHBCM4GvxHumZYGHEhKy',
   device_serial: 'GK4595968',
   channel_no: 1,
   code: '12345678',
@@ -24,7 +24,7 @@ export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
     is_active: true,
     config: {
       mode: 'hik',
-      access_token: 'hpc.6gkhm0Id7BkA8CN5zYBu9IkNDqEkifaA',
+      access_token: 'hpc.FIDG6RhuHrZsHHBCM4GvxHumZYGHEhKy',
       device_serial: 'GK4595968',
       channel_no: 1,
       code: '12345678',
@@ -44,7 +44,7 @@ export const MOCK_DASHBOARD_CAMERA_DEVICES: DbDevice[] = [
     is_active: true,
     config: {
       mode: 'hik',
-      access_token: 'hpc.6gkhm0Id7BkA8CN5zYBu9IkNDqEkifaA',
+      access_token: 'hpc.FIDG6RhuHrZsHHBCM4GvxHumZYGHEhKy',
       device_serial: 'GK2156266',
       channel_no: 1,
       code: '12345678',
