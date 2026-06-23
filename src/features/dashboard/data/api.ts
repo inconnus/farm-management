@@ -224,7 +224,7 @@ const mockIOTDevices: IOTDevice[] = [
 ];
 
 // Populate mock IDs set
-for (const d of mockIOTDevices) mockAppIotIds.add(d.appIotId);
+// for (const d of mockIOTDevices) mockAppIotIds.add(d.appIotId);
 export const fetchIOTDevices = async (): Promise<IOTDevice[]> => {
   const response = await fetch(
     'https://api.kasetkorn.app/api/iot/setup/GetIotAll',
@@ -235,7 +235,7 @@ export const fetchIOTDevices = async (): Promise<IOTDevice[]> => {
   const apiDevices = await response
     .json()
     .then((data) => data.data as IOTDevice[]);
-  return [...apiDevices, ...mockIOTDevices];
+  return [...apiDevices,];
 };
 
 export interface LandResponse {
