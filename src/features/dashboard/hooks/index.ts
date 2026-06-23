@@ -1,4 +1,6 @@
+import { sensorApiSettingsAtom } from '@shared/store/sensorApiStore';
 import { useQueries, useQuery } from '@tanstack/react-query';
+import { useAtomValue } from 'jotai';
 import { iotDeviceQueries, landQueries } from '../data/queries';
 
 export const useIOTDevicesQuery = () => {
@@ -22,9 +24,11 @@ export const useLandsQueries = (appFarmIds: string[]) => {
 };
 
 export const useIOTTelemetryQueries = (appIotIds: string[]) => {
+  const sensorApiSettings = useAtomValue(sensorApiSettingsAtom);
+
   return useQueries({
     queries: appIotIds.map((appIotId) => ({
-      ...iotDeviceQueries.telemetry(appIotId),
+      ...iotDeviceQueries.telemetry(appIotId, sensorApiSettings),
       refetchInterval: 10000,
     })),
   });

@@ -1,9 +1,11 @@
 import { Avatar, Modal, Separator } from '@heroui/react';
+import { SensorApiPanel } from '@features/settings/SensorApiPanel';
 import { supabase } from '@shared/lib/supabase/client';
 import type { Enums, Tables } from '@shared/lib/supabase/database.types';
 import {
   CrownIcon,
   MailIcon,
+  RadioIcon,
   ShieldCheckIcon,
   Trash2Icon,
   UserIcon,
@@ -25,7 +27,7 @@ type MemberWithProfile = {
 
 type TeamWithMembers = Tables<'teams'> & { memberCount: number };
 
-type SettingKey = 'members' | 'teams';
+type SettingKey = 'members' | 'teams' | 'sensor-api';
 
 // ─── Sidebar nav definition ───────────────────────────────────────────────────
 
@@ -46,6 +48,16 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'members', label: 'สมาชิก', icon: <UsersIcon className="size-4" /> },
       { key: 'teams', label: 'ทีม', icon: <ShieldCheckIcon className="size-4" /> },
+    ],
+  },
+  {
+    group: 'IoT',
+    items: [
+      {
+        key: 'sensor-api',
+        label: 'API เซ็นเซอร์',
+        icon: <RadioIcon className="size-4" />,
+      },
     ],
   },
 ];
@@ -257,6 +269,9 @@ export const SettingsModal = ({
                 )}
                 {activeKey === 'teams' && (
                   <TeamsPanel teams={teams} isLoading={isLoadingTeams} />
+                )}
+                {activeKey === 'sensor-api' && (
+                  <SensorApiPanel isActive={activeKey === 'sensor-api'} />
                 )}
               </main>
             </div>

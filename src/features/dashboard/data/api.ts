@@ -107,21 +107,61 @@ function generateMockTelemetry(): TelemetryResponse {
   };
 }
 
+import type { SensorApiSettings } from '@shared/store/sensorApiStore';
+
+const KASETKORN_AUTH_TOKEN =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzc2Njk0MjUzfQ.Y8Edwh77zTpohMffVloQRy8O8EO6NsDY3CIwg6dvCNo';
+
+const kasetkornAuthHeaders = {
+  Authorization: `Bearer ${KASETKORN_AUTH_TOKEN}`,
+};
+
+function pickLatestTelemetry(
+  data: TelemetryResponse['data'],
+): TelemetryResponse['data'][number] | undefined {
+  if (data.length === 0) return undefined;
+  if (data.length === 1) return data[0];
+  return [...data].sort((a, b) => {
+    const ta =
+      (a.time ? new Date(a.time).getTime() : 0) || a.sensor_ts || 0;
+    const tb =
+      (b.time ? new Date(b.time).getTime() : 0) || b.sensor_ts || 0;
+    return tb - ta;
+  })[0];
+}
+
 export const fetchIOTDeviceTelemetry = async (
   appIotId: string,
+  settings: SensorApiSettings,
 ): Promise<TelemetryResponse> => {
   // ถ้าเป็น mock device → return dummy data ทันที (ไม่เรียก API จริง)
   // if (mockAppIotIds.has(appIotId)) {
   //   return generateMockTelemetry();
   // }
 
+  if (settings.mode === 'all') {
+    const response = await fetch(
+      'https://api.kasetkorn.app/api/iot/read/all',
+      {
+        method: 'POST',
+        headers: {
+          ...kasetkornAuthHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ UID: appIotId, time: settings.timeRange }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch telemetry');
+    }
+    const json = (await response.json()) as TelemetryResponse;
+    const latest = pickLatestTelemetry(json.data ?? []);
+    return { data: latest ? [latest] : [] };
+  }
+
   const response = await fetch(
     `https://api.kasetkorn.app/api/iot/read/last/${appIotId}`,
-    {
-      headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzc2Njk0MjUzfQ.Y8Edwh77zTpohMffVloQRy8O8EO6NsDY3CIwg6dvCNo`,
-      },
-    },
+    { headers: kasetkornAuthHeaders },
   );
   if (!response.ok) {
     throw new Error('Failed to fetch telemetry');
