@@ -59,9 +59,41 @@ body {
 } */
 
 .custom-popup-portal {
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
   will-change: transform;
+}
+
+/* path รถไถ — ชั้นล่างใน canvas-container */
+.vehicle-path-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: var(--map-right-sidebar-inset, 0px);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* marker รถไถ — ชั้นบน path ใน canvas-container เดียวกัน */
+.vehicle-marker-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: var(--map-right-sidebar-inset, 0px);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.vehicle-marker-overlay-item {
+  pointer-events: auto;
+}
+
+.mapboxgl-marker-container {
+  z-index: 3;
 }
 
 .custom-popup-portal .mapboxgl-popup-content {

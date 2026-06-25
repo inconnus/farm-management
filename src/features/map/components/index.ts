@@ -39,4 +39,7 @@ export {
   toLightData,
 } from './LightMarker';
 export { LightPopup } from './LightPopup';
+export { MapPathMount } from './MapPathMount';
+export { VehicleMarker, VehicleMarkerFace } from './VehicleMarker';
+export { VehiclePopup } from './VehiclePopup';
 export { default as WeatherWidget } from './WeatherWidget';

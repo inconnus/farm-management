@@ -8,12 +8,16 @@ import {
 } from '@store/selectionStore';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTilesetsQuery } from '../hooks/useTilesetsQuery';
+import { getTilesetBeforeId, movePathLayersToTop } from '../layerOrder';
 import { devicePopupAtom } from '../store/devicePopupAtom';
 import { CameraPopup } from './CameraPopup';
 import { MapPopup } from './index';
 import { LightPopup } from './LightPopup';
 import { MapStyleSwitcher } from './MapStyleSwitcher';
+import { MapPathOverlay } from './MapPathOverlay';
+import { VehicleMapMarkerOverlay } from './VehicleMapMarkerOverlay';
 import { SolarCellPopup } from './SolarCellPopup';
+import { VehiclePopup } from './VehiclePopup';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -149,22 +153,22 @@ const MapView = () => {
       });
 
       if (tileset.tileset_type !== 'raster-dem') {
-        const firstDrawLayer = m
-          .getStyle()
-          .layers?.find((l) => l.id.startsWith('gl-draw-'))?.id;
         m.addLayer(
           {
             id: `tileset-${tileset.id}`,
             type: 'raster',
             source: `tileset-${tileset.id}`,
+            slot: 'bottom',
             paint: { 'raster-opacity': tileset.opacity },
             ...(tileset.min_zoom != null && { minzoom: tileset.min_zoom }),
             ...(tileset.max_zoom != null && { maxzoom: tileset.max_zoom }),
           },
-          firstDrawLayer,
+          getTilesetBeforeId(m),
         );
       }
     }
+
+    movePathLayersToTop(m);
 
     addedTilesetIdsRef.current = newIds;
   }, [dbTilesets, mapReady]);
@@ -172,9 +176,15 @@ const MapView = () => {
   return (
     <>
       <div id="map-container" ref={mapContainer} />
+      <MapPathOverlay />
+      <VehicleMapMarkerOverlay />
       {mapReady && <MapStyleSwitcher />}
       {devicePopup && map.current && (
-        <MapPopup map={map.current} lngLat={devicePopup.lngLat}>
+        <MapPopup
+          map={map.current}
+          lngLat={devicePopup.lngLat}
+          followLivePosition={devicePopup.type === 'vehicle'}
+        >
           {devicePopup.type === 'camera' && devicePopup.camera && (
             <CameraPopup camera={devicePopup.camera} />
           )}
@@ -191,6 +201,9 @@ const MapView = () => {
                 })
               }
             />
+          )}
+          {devicePopup.type === 'vehicle' && devicePopup.vehicle && (
+            <VehiclePopup vehicle={devicePopup.vehicle} />
           )}
         </MapPopup>
       )}

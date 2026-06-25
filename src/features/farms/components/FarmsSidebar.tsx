@@ -12,6 +12,9 @@ import {
   toLightData,
   toSolarCellData,
 } from '@features/map/components';
+import { selectedVehicleMapIdAtom } from '@features/map/store/selectedVehicleMapIdAtom';
+import { vehicleMapMarkersAtom } from '@features/map/store/vehicleMapLayerAtom';
+import { vehicleOverlayActiveAtom } from '@features/map/store/vehicleOverlayActiveAtom';
 import { MapPolygonDrawMount } from '@features/map/components/MapPolygonDrawMount';
 import { TaskLabel } from '@features/map/components/TaskLabel';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
@@ -35,6 +38,8 @@ import { toFarm } from '../transforms';
 import { FarmDetailPage } from './FarmDetailPage';
 import { FarmListPage } from './FarmListPage';
 import { LandDetailPage } from './LandDetailPage';
+import { useLandAutomatedJobsQuery } from '@features/automated-jobs/hooks/useLandAutomatedJobsQuery';
+import { automatedJobToVehicleData } from '@features/automated-jobs/utils/toVehicleData';
 import { getCentroid } from 'src/utils/map';
 
 // ─── Map helpers ─────────────────────────────────────────────────
@@ -89,8 +94,12 @@ export const FarmsSidebar = () => {
   const selectFarm = useSetAtom(selectFarmAtom);
   const selectLand = useSetAtom(selectLandAtom);
   const setDevicePopup = useSetAtom(devicePopupAtom);
+  const setVehicleMapMarkers = useSetAtom(vehicleMapMarkersAtom);
+  const vehicleOverlayActive = useAtomValue(vehicleOverlayActiveAtom);
+  const selectedVehicleMapId = useAtomValue(selectedVehicleMapIdAtom);
   const [clickedPolygonLandId, setClickedPolygonLandId] = useAtom(clickedPolygonLandIdAtom);
   const { farmId, orgSlug, landId } = useParams<{ farmId?: string; orgSlug?: string; landId?: string }>();
+  const { data: landAutomatedJobs } = useLandAutomatedJobsQuery(landId ?? '');
 
   // ─── Data ────────────────────────────────────────────────────
 
@@ -132,6 +141,19 @@ export const FarmsSidebar = () => {
     () => selectedFarm?.lands.find((l) => l.id === landId),
     [selectedFarm, landId],
   );
+
+  const mapVehicles = useMemo(() => {
+    if (!vehicleOverlayActive || !selectedLandData || !selectedVehicleMapId || !landAutomatedJobs) {
+      return [];
+    }
+    const job = landAutomatedJobs.find((j) => j.id === selectedVehicleMapId);
+    if (!job) return [];
+    return [automatedJobToVehicleData(job, selectedLandData.name)];
+  }, [vehicleOverlayActive, selectedLandData, selectedVehicleMapId, landAutomatedJobs]);
+
+  useEffect(() => {
+    setVehicleMapMarkers(mapVehicles);
+  }, [mapVehicles, setVehicleMapMarkers]);
 
   // Sync lands from server when farm changes
   useEffect(() => {
@@ -271,14 +293,16 @@ export const FarmsSidebar = () => {
             popupInfo={selectedLandData ? { land: selectedLandData } : null}
             onClearSelection={() => setDevicePopup(null)}
           />
-          {lands.map((item) => (
-            <PolygonMarker key={item.id} coords={item.coords}>
-              <TaskLabel
-                name={item.name}
-                taskCount={taskCountByLand.get(item.id) ?? 0}
-              />
-            </PolygonMarker>
-          ))}
+          {lands.map((item) =>
+            !vehicleOverlayActive ? (
+              <PolygonMarker key={item.id} coords={item.coords}>
+                <TaskLabel
+                  name={item.name}
+                  taskCount={taskCountByLand.get(item.id) ?? 0}
+                />
+              </PolygonMarker>
+            ) : null,
+          )}
         </>
       )}
 

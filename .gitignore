@@ -26,3 +26,6 @@ styled-system-studio
 .env
 .env.*
 !.env.example
+
+# Supabase MCP (PAT อยู่ใน .env.supabase)
+.env.supabase

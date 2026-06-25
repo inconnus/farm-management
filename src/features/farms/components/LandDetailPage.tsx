@@ -10,11 +10,28 @@ import {
   useUpdateTask,
   useUpdateTaskStatus,
 } from '@features/tasks/hooks/useLandTasksQuery';
-import { Button, Calendar, DateField, DatePicker, Modal, Separator } from '@heroui/react';
+import { CreateAutomatedJobModal } from '@features/automated-jobs/components/CreateAutomatedJobModal';
+import { JobProgressPercent } from '@features/automated-jobs/components/JobProgressPercent';
+import {
+  useCreateAutomatedJob,
+  useFarmBusyAutomatedDevicesQuery,
+  useLandAutomatedJobsQuery,
+} from '@features/automated-jobs/hooks/useLandAutomatedJobsQuery';
+import { automatedJobToVehicleData } from '@features/automated-jobs/utils/toVehicleData';
+import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
+import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
+import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
+import { vehicleOverlayActiveAtom } from '@features/map/store/vehicleOverlayActiveAtom';
+import { selectedVehicleMapIdAtom } from '@features/map/store/selectedVehicleMapIdAtom';
+import { getDeviceSpeedKmh, getVehicleTypeMeta, isAutomatedVehicleDevice, VehicleTypeIcon } from '@features/vehicles/utils/vehicleDisplay';
+import type { VehicleData } from '@features/vehicles/types';
+import { mapInstanceAtom } from '@store/mapStore';
+import { Button, Calendar, Chip, DateField, DatePicker, Modal, Separator, Tabs } from '@heroui/react';
 import { parseDate } from '@internationalized/date';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Pencil,
   Plus,
@@ -24,7 +41,8 @@ import {
 } from 'lucide-react';
 import { currentOrgIdAtom } from '@shared/store/orgStore';
 import { DropdownMenu } from '@shared/ui/DropdownMenu';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
+import mapboxgl from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -67,6 +85,33 @@ const STATUS_META: Record<TaskStatus, { label: string; dot: string; badge: strin
 };
 
 type FilterKey = 'all' | TaskStatus;
+
+type LandDetailTab = 'tasks' | 'vehicles';
+
+const VEHICLE_STATUS_LABEL: Record<VehicleData['status'], string> = {
+  working: 'กำลังทำงาน',
+  idle: 'พร้อมใช้งาน',
+  charging: 'กำลังชาร์จ',
+  offline: 'ออฟไลน์',
+};
+
+const VEHICLE_STATUS_CHIP: Record<VehicleData['status'], string> = {
+  working: 'bg-emerald-50 text-emerald-700',
+  idle: 'bg-sky-50 text-sky-700',
+  charging: 'bg-amber-50 text-amber-700',
+  offline: 'bg-gray-100 text-gray-600',
+};
+
+function zoomToPath(map: mapboxgl.Map, path: [number, number][]) {
+  if (path.length < 2) return;
+  const bounds = new mapboxgl.LngLatBounds();
+  for (const coord of path) bounds.extend(coord);
+  map.fitBounds(bounds, {
+    padding: { top: 60, bottom: 60, left: 420, right: 60 },
+    duration: 800,
+    essential: true,
+  });
+}
 
 // ─── Assignee selection type ──────────────────────────────────────────────────
 
@@ -480,10 +525,18 @@ type Props = {
 export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
   const landId = String(land.id);
   const orgId = useAtomValue(currentOrgIdAtom);
+  const mapInstance = useAtomValue(mapInstanceAtom);
+  const setDevicePopup = useSetAtom(devicePopupAtom);
+  const setVehicleOverlayActive = useSetAtom(vehicleOverlayActiveAtom);
+  const selectedVehicleMapId = useAtomValue(selectedVehicleMapIdAtom);
+  const setSelectedVehicleMapId = useSetAtom(selectedVehicleMapIdAtom);
+
+  const [activeTab, setActiveTab] = useState<LandDetailTab>('tasks');
 
   const { data: dbTasks, isLoading: tasksLoading } = useLandTasksQuery(landId);
   const { data: membersData } = useOrgMembersWithFarmTeamsQuery(orgId, farmId);
   const createTask = useCreateTask();
+  const createAutomatedJob = useCreateAutomatedJob();
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
   const updateTask = useUpdateTask();
@@ -526,7 +579,17 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
     updateStatus.mutate({ taskId, status: advanceDbStatus(dbTask.status), landId });
   }, [dbTasks, updateStatus, landId]);
 
+  const { data: dbAutomatedJobs, isLoading: automatedJobsLoading } = useLandAutomatedJobsQuery(landId);
+  const { data: busyAutomatedDevices = [] } = useFarmBusyAutomatedDevicesQuery(farmId);
+  const { data: dbDevices } = useDevicesQuery(farmId);
+
+  const automatedDevices = useMemo(
+    () => dbDevices?.filter(isAutomatedVehicleDevice) ?? [],
+    [dbDevices],
+  );
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateAutomatedJobModalOpen, setIsCreateAutomatedJobModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskModalInitial | null>(null);
 
   const handleCreate = useCallback((formData: TaskFormData) => {
@@ -562,10 +625,89 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
 
   const mapImageUrl = useMemo(() => buildPolygonMapUrl(land.coords, land.color ?? '#22c55e'), [land.coords, land.color]);
 
+  const vehicles = useMemo(
+    () => (dbAutomatedJobs ?? []).map((job) => automatedJobToVehicleData(job, land.name)),
+    [dbAutomatedJobs, land.name],
+  );
+
+  const filteredVehicles = useMemo(() => {
+    if (!search.trim()) return vehicles;
+    const q = search.trim().toLowerCase();
+    return vehicles.filter(
+      (v) =>
+        v.jobTitle.toLowerCase().includes(q) ||
+        v.name.toLowerCase().includes(q) ||
+        VEHICLE_STATUS_LABEL[v.status].toLowerCase().includes(q),
+    );
+  }, [vehicles, search]);
+
+  useEffect(() => {
+    setDevicePopup(null);
+    setVehicleOverlayActive(activeTab === 'vehicles');
+    if (activeTab !== 'vehicles') {
+      setSelectedVehicleMapId(null);
+    }
+    return () => {
+      setDevicePopup(null);
+      setVehicleOverlayActive(false);
+      setSelectedVehicleMapId(null);
+    };
+  }, [activeTab, setDevicePopup, setVehicleOverlayActive, setSelectedVehicleMapId]);
+
+  const handleSelectVehicle = useCallback(
+    (vehicle: VehicleData) => {
+      setSelectedVehicleMapId(vehicle.id);
+      if (mapInstance) {
+        if (vehicle.workPath.length >= 2) {
+          zoomToPath(mapInstance, vehicle.workPath);
+        } else {
+          mapInstance.flyTo({ center: [vehicle.lng, vehicle.lat], zoom: 17, duration: 800 });
+        }
+      }
+      vehiclePopupLiveLngLatRef.current = [vehicle.lng, vehicle.lat];
+      setDevicePopup({ type: 'vehicle', lngLat: [vehicle.lng, vehicle.lat], vehicle });
+    },
+    [mapInstance, setDevicePopup, setSelectedVehicleMapId],
+  );
+
+  const handleCreateAutomatedJob = useCallback(
+    (formData: {
+      title: string;
+      description?: string;
+      deviceId: string;
+      workPath: [number, number][];
+    }) => {
+      if (formData.workPath.length < 2) return;
+
+      const device = automatedDevices.find((d) => d.id === formData.deviceId);
+      const speedKmh = device ? getDeviceSpeedKmh(device) : 4.2;
+
+      createAutomatedJob.mutate(
+        {
+          farmId,
+          landId,
+          deviceId: formData.deviceId,
+          title: formData.title,
+          description: formData.description,
+          workPath: formData.workPath,
+          speedKmh,
+        },
+        {
+          onSuccess: (job) => {
+            setIsCreateAutomatedJobModalOpen(false);
+            const vehicle = automatedJobToVehicleData(job, land.name);
+            handleSelectVehicle(vehicle);
+          },
+        },
+      );
+    },
+    [createAutomatedJob, farmId, landId, land.name, automatedDevices, handleSelectVehicle],
+  );
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <Column className="flex flex-col  max-h-[calc(90vh)] overflow-hidden">
+    <Column className="flex flex-col flex-1 min-h-0 max-h-[calc(90vh)] overflow-hidden">
 
       {/* ── Navigation header ── */}
       <div className="px-2 pt-3 pb-0 shrink-0">
@@ -601,74 +743,177 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
         </div>
       )}
 
-      {/* ── Stats row ── */}
-      <div className="px-3 mt-2 shrink-0 grid grid-cols-3 gap-2">
-        {(['pending_confirmation', 'in_progress', 'done'] as TaskStatus[]).map((s) => {
-          const m = STATUS_META[s];
-          const active = filter === s;
-          return (
-            <button
-              key={s}
-              onClick={() => setFilter(active ? 'all' : s)}
-              className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
-            >
-              <span className={`text-lg font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
-              <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Search bar ── */}
-      <div className="px-3 mt-3 shrink-0">
-        <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
-          <SearchIcon size={14} className="text-gray-400 shrink-0" />
-          <input
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-            placeholder="ค้นหางาน..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </Row>
-      </div>
-
-      <Separator className="mx-3 mt-2" />
-
-      {/* ── Task list ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {tasksLoading ? (
-          <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงาน…</div>
-        ) : filteredTasks.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">
-            {search ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงาน'}
-          </div>
-        ) : (
-          filteredTasks.map((task, i) => (
-            <div key={task.id}>
-              <TaskItem
-                task={task}
-                membersData={membersData}
-                onAdvance={advanceStatus}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-              {i < filteredTasks.length - 1 && <Separator className="my-0.5" />}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* ── Create task button ── */}
-      <div className="px-3 pb-3 pt-2 shrink-0">
-        <Button
-          className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
-          onPress={() => setIsCreateModalOpen(true)}
-          size="lg"
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-3 mt-2">
+        <Tabs
+          selectedKey={activeTab}
+          onSelectionChange={(key) => setActiveTab(key as LandDetailTab)}
+          className="w-full flex-1 min-h-0 flex flex-col"
         >
-          <Plus size={14} />
-          สร้างงานใหม่
-        </Button>
+          <Tabs.ListContainer className="shrink-0">
+            <Tabs.List aria-label="แปลง" className="bg-black/5">
+              <Tabs.Tab id="tasks">
+                งาน
+                <Tabs.Indicator />
+              </Tabs.Tab>
+              <Tabs.Tab id="vehicles">
+                งานอัตโนมัติ
+                <Tabs.Indicator />
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs.ListContainer>
+
+          <Tabs.Panel id="tasks" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2">
+            {/* ── Stats row ── */}
+            <div className="shrink-0 grid grid-cols-3 gap-2">
+              {(['pending_confirmation', 'in_progress', 'done'] as TaskStatus[]).map((s) => {
+                const m = STATUS_META[s];
+                const active = filter === s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setFilter(active ? 'all' : s)}
+                    className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
+                  >
+                    <span className={`text-lg font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
+                    <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Search bar ── */}
+            <div className="mt-3 shrink-0">
+              <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
+                <SearchIcon size={14} className="text-gray-400 shrink-0" />
+                <input
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                  placeholder="ค้นหางาน..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </Row>
+            </div>
+
+            <Separator className="mt-2 shrink-0" />
+
+            {/* ── Task list ── */}
+            <div className="flex-1 min-h-0 overflow-y-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {tasksLoading ? (
+                <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงาน…</div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-400">
+                  {search ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงาน'}
+                </div>
+              ) : (
+                filteredTasks.map((task, i) => (
+                  <div key={task.id}>
+                    <TaskItem
+                      task={task}
+                      membersData={membersData}
+                      onAdvance={advanceStatus}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                    {i < filteredTasks.length - 1 && <Separator className="my-0.5" />}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* ── Create task button ── */}
+            <div className="pb-3 pt-2 shrink-0">
+              <Button
+                className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
+                onPress={() => setIsCreateModalOpen(true)}
+                size="lg"
+              >
+                <Plus size={14} />
+                สร้างงานใหม่
+              </Button>
+            </div>
+          </Tabs.Panel>
+
+          <Tabs.Panel id="vehicles" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2">
+            <div className="shrink-0">
+              <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
+                <SearchIcon size={14} className="text-gray-400 shrink-0" />
+                <input
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+                  placeholder="ค้นหางานอัตโนมัติ..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </Row>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto mt-2 gap-1 camera-list-scroll">
+              {automatedJobsLoading ? (
+                <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงานอัตโนมัติ…</div>
+              ) : (
+                <>
+                  {filteredVehicles.map((vehicle) => {
+                    const isSelected = selectedVehicleMapId === vehicle.id;
+                    const meta = getVehicleTypeMeta(vehicle.type);
+                    return (
+                      <Row
+                        key={vehicle.id}
+                        onClick={() => handleSelectVehicle(vehicle)}
+                        className={`items-center rounded-xl p-2.5 transition-colors cursor-pointer shrink-0 ${
+                          isSelected ? `${meta.listSelectedBg} ring-1 ${meta.listSelectedRing}` : 'hover:bg-black/5'
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border relative ${meta.listBg} ${meta.listBorder}`}>
+                          <VehicleTypeIcon type={vehicle.type} size={16} className={meta.listIcon} />
+                          {vehicle.status === 'working' && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white animate-pulse" />
+                          )}
+                        </div>
+                        <Column className="ml-2.5 min-w-0">
+                          <span className="font-medium text-sm truncate">{vehicle.jobTitle}</span>
+                          <Chip className={`w-fit mt-0.5 ${VEHICLE_STATUS_CHIP[vehicle.status]}`}>
+                            <Chip.Label className="text-[11px]">
+                              {VEHICLE_STATUS_LABEL[vehicle.status]} · <JobProgressPercent vehicle={vehicle} />
+                            </Chip.Label>
+                          </Chip>
+                        </Column>
+                        <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                      </Row>
+                    );
+                  })}
+
+                  {filteredVehicles.length === 0 && (
+                    <span className="text-center text-gray-400 py-8 text-sm block">
+                      {search.trim() ? 'ไม่พบงานอัตโนมัติที่ค้นหา' : 'ยังไม่มีงานอัตโนมัติในแปลงนี้'}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="pb-3 pt-2 shrink-0">
+              <Button
+                className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
+                onPress={() => setIsCreateAutomatedJobModalOpen(true)}
+                size="lg"
+              >
+                <Plus size={14} />
+                สร้างงานอัตโนมัติ
+              </Button>
+            </div>
+          </Tabs.Panel>
+        </Tabs>
       </div>
+
+      <CreateAutomatedJobModal
+        isOpen={isCreateAutomatedJobModalOpen}
+        onOpenChange={setIsCreateAutomatedJobModalOpen}
+        landName={land.name}
+        landCoords={land.coords}
+        automatedDevices={automatedDevices}
+        busyDevices={busyAutomatedDevices}
+        isPending={createAutomatedJob.isPending}
+        onSubmit={handleCreateAutomatedJob}
+      />
 
       <TaskModal
         isOpen={isCreateModalOpen}

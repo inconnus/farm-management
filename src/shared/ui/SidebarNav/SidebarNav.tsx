@@ -2,6 +2,7 @@ import { Column } from '@app/layout';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { twMerge } from 'tailwind-merge';
 import type { SidebarNavAPI, SidebarNavProps } from './types';
 
 function trimLastSegment(pathname: string): string {
@@ -155,7 +156,33 @@ export function SidebarNav({
   // ─── Height animation ────────────────────────────────────────
 
   const pageRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [panelHeight, setPanelHeight] = useState<number>(0);
+
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+
+    const syncRightInset = () => {
+      const rect = el.getBoundingClientRect();
+      const inset = Math.max(0, Math.ceil(window.innerWidth - rect.left));
+      document.documentElement.style.setProperty(
+        '--map-right-sidebar-inset',
+        `${inset}px`,
+      );
+    };
+
+    syncRightInset();
+    const ro = new ResizeObserver(syncRightInset);
+    ro.observe(el);
+    window.addEventListener('resize', syncRightInset);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', syncRightInset);
+      document.documentElement.style.removeProperty('--map-right-sidebar-inset');
+    };
+  }, []);
 
   useEffect(() => {
     const el = pageRef.current;
@@ -171,10 +198,12 @@ export function SidebarNav({
   return (
     <>
       <Column
-        className={
+        ref={panelRef}
+        className={twMerge(
+          'z-10 absolute right-0',
           className ??
-          'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden absolute right-0'
-        }
+            'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden',
+        )}
       >
         <motion.div
           className="relative overflow-hidden"

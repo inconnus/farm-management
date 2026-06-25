@@ -1,3 +1,4 @@
+import type { VehicleData } from '@features/vehicles/types';
 import { atom } from 'jotai';
 import type { CameraData } from '../components/CameraMarker';
 import type { LightData } from '../components/LightMarker';
@@ -18,6 +19,11 @@ export type DevicePopupState =
       type: 'light';
       lngLat: [number, number];
       light: LightData;
+    }
+  | {
+      type: 'vehicle';
+      lngLat: [number, number];
+      vehicle: VehicleData;
     }
   | null;
 

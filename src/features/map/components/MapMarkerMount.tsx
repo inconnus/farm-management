@@ -21,6 +21,10 @@ type MapMarkerMountProps = {
   /** Increment to forcefully open the popup programmatically. */
   openPopupSignal?: number;
   anchor?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  /** offset ของ marker (px) — จัดให้ไอคอนตรงจุด lat/lng */
+  offset?: [number, number];
+  /** class บน element ของ mapbox marker */
+  markerClassName?: string;
 };
 
 export function MapMarkerMount({
@@ -32,6 +36,8 @@ export function MapMarkerMount({
   closePopupSignal = 0,
   openPopupSignal = 0,
   anchor = 'center',
+  offset,
+  markerClassName,
 }: MapMarkerMountProps) {
   const map = useAtomValue(mapInstanceAtom);
   const [markerNode] = useState(() => document.createElement('div'));
@@ -51,13 +57,19 @@ export function MapMarkerMount({
 
     const marker = new mapboxgl.Marker({
       element: hasCustomMarker ? markerNode : undefined,
-      anchor: anchor,
+      anchor,
+      ...(offset && { offset }),
     }).setLngLat([lng, lat]);
 
     markerRef.current = marker;
 
     const el = marker.getElement();
     el.style.cursor = 'pointer';
+    if (markerClassName) {
+      for (const cls of markerClassName.split(/\s+/).filter(Boolean)) {
+        el.classList.add(cls);
+      }
+    }
 
     if (hasPopup) {
       const mount = document.createElement('div');
@@ -93,12 +105,17 @@ export function MapMarkerMount({
       el.removeEventListener('mousedown', stop);
       el.removeEventListener('pointerdown', stop);
       el.removeEventListener('click', onMarkerClick);
+      if (markerClassName) {
+        for (const cls of markerClassName.split(/\s+/).filter(Boolean)) {
+          el.classList.remove(cls);
+        }
+      }
       setPopupContainer(null);
       marker.getPopup()?.remove();
       marker.remove();
       markerRef.current = null;
     };
-  }, [map, lat, lng, markerNode, hasPopup, hasCustomMarker]);
+  }, [map, lat, lng, markerNode, hasPopup, hasCustomMarker, markerClassName, anchor, offset]);
 
   useEffect(() => {
     if (!closePopupSignal) return;

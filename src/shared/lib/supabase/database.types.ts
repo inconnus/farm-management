@@ -1,4 +1,4 @@
-export type Json =
+﻿xport type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.4"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -43,6 +68,95 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      automated_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          device_id: string
+          farm_id: string
+          id: string
+          land_id: string
+          path_length_km: number | null
+          path_progress: number
+          simulation_speed_factor: number
+          speed_kmh: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["automated_job_status"]
+          title: string
+          updated_at: string
+          work_path: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          device_id: string
+          farm_id: string
+          id?: string
+          land_id: string
+          path_length_km?: number | null
+          path_progress?: number
+          simulation_speed_factor?: number
+          speed_kmh?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["automated_job_status"]
+          title: string
+          updated_at?: string
+          work_path?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          device_id?: string
+          farm_id?: string
+          id?: string
+          land_id?: string
+          path_length_km?: number | null
+          path_progress?: number
+          simulation_speed_factor?: number
+          speed_kmh?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["automated_job_status"]
+          title?: string
+          updated_at?: string
+          work_path?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automated_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automated_jobs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "farm_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automated_jobs_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automated_jobs_land_id_fkey"
+            columns: ["land_id"]
+            isOneToOne: false
+            referencedRelation: "lands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       farm_devices: {
         Row: {
@@ -562,11 +676,38 @@ export type Database = {
     Functions: {
       get_my_farm_ids: { Args: never; Returns: string[] }
       get_my_org_ids: { Args: never; Returns: string[] }
+      haversine_km: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       is_farm_manager: { Args: { p_farm_id: string }; Returns: boolean }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
+      path_length_km_from_json: { Args: { path: Json }; Returns: number }
+      position_along_work_path: {
+        Args: { path: Json; progress: number }
+        Returns: {
+          out_heading: number
+          out_lat: number
+          out_lng: number
+        }[]
+      }
+      tick_automated_jobs: { Args: never; Returns: number }
     }
     Enums: {
-      device_type: "camera" | "solar_cell" | "water_pump" | "sensor" | "light"
+      automated_job_status:
+        | "queued"
+        | "working"
+        | "paused"
+        | "completed"
+        | "cancelled"
+      device_type:
+        | "camera"
+        | "solar_cell"
+        | "water_pump"
+        | "sensor"
+        | "light"
+        | "tractor"
+        | "drone"
       farm_member_role: "owner" | "manager" | "worker"
       land_status: "active" | "fallow" | "harvested" | "preparing"
       org_member_role: "owner" | "admin" | "member"
@@ -698,9 +839,27 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
-      device_type: ["camera", "solar_cell", "water_pump", "sensor", "light"],
+      automated_job_status: [
+        "queued",
+        "working",
+        "paused",
+        "completed",
+        "cancelled",
+      ],
+      device_type: [
+        "camera",
+        "solar_cell",
+        "water_pump",
+        "sensor",
+        "light",
+        "tractor",
+        "drone",
+      ],
       farm_member_role: ["owner", "manager", "worker"],
       land_status: ["active", "fallow", "harvested", "preparing"],
       org_member_role: ["owner", "admin", "member"],

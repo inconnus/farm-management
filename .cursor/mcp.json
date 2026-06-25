@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "supabase-farm-management": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=abxttebsbqtvuzzwvkzi"
+      ],
+      "envFile": ".env.supabase"
+    }
+  }
+}
