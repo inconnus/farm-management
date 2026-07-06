@@ -42,15 +42,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     let cancelled = false;
 
-    Promise.all([fetchProfile(userId), fetchUserOrganizations(userId)]).then(
-      ([profile, organizations]) => {
-        if (cancelled) return;
-        setAuth((prev) => ({ ...prev, profile, organizations, isProfileReady: true }));
-      },
-    );
+    const loadUserData = () => {
+      Promise.all([fetchProfile(userId), fetchUserOrganizations(userId)]).then(
+        ([profile, organizations]) => {
+          if (cancelled) return;
+          setAuth((prev) => ({ ...prev, profile, organizations, isProfileReady: true }));
+        },
+      );
+    };
+
+    loadUserData();
+
+    const handleFocus = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', handleFocus);
     };
   }, [auth.user?.id, setAuth]);
 

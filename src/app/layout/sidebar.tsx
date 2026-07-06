@@ -1,6 +1,11 @@
 import { organizationsAtom, userAtom } from '@features/auth/store';
 import { SettingsModal } from '@features/settings/SettingsModal';
 import {
+  canAccessNavItem,
+  canAccessSettings,
+  ORG_ROLE_LABEL,
+} from '@shared/lib/permissions';
+import {
   Avatar,
   Button,
   Description,
@@ -45,6 +50,11 @@ const Sidebar = () => {
   }, [currentOrg, setCurrentOrg]);
 
   const base = `/${orgSlug}`;
+  const role = currentOrg?.role ?? null;
+  const showDashboard = canAccessNavItem(role, 'dashboard');
+  const showCamera = canAccessNavItem(role, 'camera');
+  const showFarms = canAccessNavItem(role, 'farms');
+  const showSettings = canAccessSettings(role);
   const activePath =
     [`${base}/dashboard`, `${base}/farms`, `${base}/camera`].find((path) =>
       location.pathname.startsWith(path),
@@ -70,85 +80,104 @@ const Sidebar = () => {
               <Skeleton className="w-full h-2 bg-black/5" />
             )}
             {currentOrg ? (
-              <span className="text-sm text-gray-500">{currentOrg?.role}</span>
+              <span className="text-sm text-gray-500">
+                {ORG_ROLE_LABEL[currentOrg.role] ?? currentOrg.role}
+              </span>
             ) : (
               <Skeleton className="w-10 h-2 bg-black/5" />
             )}
           </Column>
         </Row>
         <Separator className="my-1" />
-        <Row className='justify-between items-center'>
-          <span className='text-xs text-gray-500'>สาธารณะ</span>
-          <GlobeIcon className='size-3 text-gray-400' />
-        </Row>
-        <ListBox
-          aria-label="Navigation"
-          className="w-[200px]"
-          selectionMode="none"
-          onAction={(key) => {
-            map?.flyTo(DEFAULT_MAP_OVERVIEW);
-            return navigate(`${base}/${key}`);
-          }}
-        >
-          <ListBox.Item
-            id="dashboard"
-            textValue="แดชบอร์ด"
-            className={`hover:bg-black/5 px-2 ${activePath === `${base}/dashboard` ? 'bg-black/5' : ''}`}
-          >
-            <HomeIcon className="size-4 " />
-            <span>แดชบอร์ด</span>
-          </ListBox.Item>
+        {(showDashboard || showCamera) && (
+          <>
+            {(showCamera || showFarms) && (
+              <Row className='justify-between items-center'>
+                <span className='text-xs text-gray-500'>สาธารณะ</span>
+                <GlobeIcon className='size-3 text-gray-400' />
+              </Row>
+            )}
+            <ListBox
+              aria-label="Navigation"
+              className="w-[200px]"
+              selectionMode="none"
+              onAction={(key) => {
+                map?.flyTo(DEFAULT_MAP_OVERVIEW);
+                return navigate(`${base}/${key}`);
+              }}
+            >
+              {showDashboard && (
+                <ListBox.Item
+                  id="dashboard"
+                  textValue="แดชบอร์ด"
+                  className={`hover:bg-black/5 px-2 ${activePath === `${base}/dashboard` ? 'bg-black/5' : ''}`}
+                >
+                  <HomeIcon className="size-4 " />
+                  <span>แดชบอร์ด</span>
+                </ListBox.Item>
+              )}
 
-          <ListBox.Item
-            id="camera"
-            textValue="กล้องจราจร"
-            className={`hover:bg-black/5 px-2 ${activePath === `${base}/camera` ? 'bg-black/5' : ''}`}
-          >
-            <CctvIcon className="size-4" />
-            <span>กล้องจราจร</span>
-          </ListBox.Item>
-        </ListBox>
-        <Row className='justify-between items-center'>
-          <span className='text-xs text-gray-500'>ส่วนตัว</span>
-          <UserIcon className='size-3 text-gray-400' />
-        </Row>
-        <ListBox
-          aria-label="Navigation"
-          className="w-[200px]"
-          selectionMode="none"
-          onAction={(key) => {
-            map?.flyTo(DEFAULT_MAP_OVERVIEW);
-            return navigate(`${base}/${key}`);
-          }}
-        >
-
-          <ListBox.Item
-            id="farms"
-            textValue="ฟาร์ม"
-            className={`hover:bg-black/5 px-2 ${activePath === `${base}/farms` ? 'bg-black/5' : ''}`}
-          >
-            <LandPlotIcon className="size-4" />
-            <span>ฟาร์ม</span>
-          </ListBox.Item>
-        </ListBox>
+              {showCamera && (
+                <ListBox.Item
+                  id="camera"
+                  textValue="กล้องจราจร"
+                  className={`hover:bg-black/5 px-2 ${activePath === `${base}/camera` ? 'bg-black/5' : ''}`}
+                >
+                  <CctvIcon className="size-4" />
+                  <span>กล้องจราจร</span>
+                </ListBox.Item>
+              )}
+            </ListBox>
+          </>
+        )}
+        {showFarms && (
+          <>
+            <Row className='justify-between items-center'>
+              <span className='text-xs text-gray-500'>ส่วนตัว</span>
+              <UserIcon className='size-3 text-gray-400' />
+            </Row>
+            <ListBox
+              aria-label="Navigation"
+              className="w-[200px]"
+              selectionMode="none"
+              onAction={(key) => {
+                map?.flyTo(DEFAULT_MAP_OVERVIEW);
+                return navigate(`${base}/${key}`);
+              }}
+            >
+              <ListBox.Item
+                id="farms"
+                textValue="ฟาร์ม"
+                className={`hover:bg-black/5 px-2 ${activePath === `${base}/farms` ? 'bg-black/5' : ''}`}
+              >
+                <LandPlotIcon className="size-4" />
+                <span>ฟาร์ม</span>
+              </ListBox.Item>
+            </ListBox>
+          </>
+        )}
         <Separator className="my-1" />
         <Spacer />
-        <Button
-          variant="ghost"
-          className="w-full justify-start hover:bg-black/5 px-3"
-          onPress={() => setIsSettingsOpen(true)}
-        >
-          <SettingsIcon className="size-4" />
-          <span>ตั้งค่า</span>
-        </Button>
+        {showSettings && (
+          <>
+            <Button
+              variant="ghost"
+              className="w-full justify-start hover:bg-black/5 px-3"
+              onPress={() => setIsSettingsOpen(true)}
+            >
+              <SettingsIcon className="size-4" />
+              <span>ตั้งค่า</span>
+            </Button>
 
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
-          orgId={currentOrg?.id ?? null}
-          currentUserId={user?.id ?? null}
-          currentUserRole={currentOrg?.role ?? null}
-        />
+            <SettingsModal
+              isOpen={isSettingsOpen}
+              onOpenChange={setIsSettingsOpen}
+              orgId={currentOrg?.id ?? null}
+              currentUserId={user?.id ?? null}
+              currentUserRole={currentOrg?.role ?? null}
+            />
+          </>
+        )}
         <Separator className="my-1" />
 
         <Row className="items-center gap-2 hover:bg-black/5 rounded-2xl cursor-pointer p-2">

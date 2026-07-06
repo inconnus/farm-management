@@ -34,7 +34,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
+    port: 3003,
     proxy: {
       '/cctv-proxy': {
         target: 'https://cctv.disaster.go.th',

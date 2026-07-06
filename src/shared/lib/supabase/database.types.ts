@@ -710,7 +710,7 @@ export type Database = {
         | "drone"
       farm_member_role: "owner" | "manager" | "worker"
       land_status: "active" | "fallow" | "harvested" | "preparing"
-      org_member_role: "owner" | "admin" | "member"
+      org_member_role: "owner" | "admin" | "member" | "viewer"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
       tileset_type: "raster" | "vector" | "raster-dem"
@@ -862,7 +862,7 @@ export const Constants = {
       ],
       farm_member_role: ["owner", "manager", "worker"],
       land_status: ["active", "fallow", "harvested", "preparing"],
-      org_member_role: ["owner", "admin", "member"],
+      org_member_role: ["owner", "admin", "member", "viewer"],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
       tileset_type: ["raster", "vector", "raster-dem"],

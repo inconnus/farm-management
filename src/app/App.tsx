@@ -5,6 +5,7 @@ import Sidebar from '@app/layout/sidebar';
 import {
   ForgotPasswordPage,
   LoginPage,
+  NavRoleRoute,
   OrgRequiredRoute,
   OrgSelectPage,
   ProtectedRoute,
@@ -65,15 +66,36 @@ const App = () => {
                 <Sidebar />
                 <MapView />
                 <Routes>
-                  <Route path="farms" element={<FarmsSidebar />}>
+                  <Route
+                    path="farms"
+                    element={
+                      <NavRoleRoute navItem="farms">
+                        <FarmsSidebar />
+                      </NavRoleRoute>
+                    }
+                  >
                     <Route path=":farmId">
                       <Route path=":landId" />
                     </Route>
                   </Route>
-                  <Route path="dashboard" element={<DashboardScreen />}>
+                  <Route
+                    path="dashboard"
+                    element={
+                      <NavRoleRoute navItem="dashboard">
+                        <DashboardScreen />
+                      </NavRoleRoute>
+                    }
+                  >
                     <Route path=":deviceId" />
                   </Route>
-                  <Route path="camera" element={<CameraScreen />}>
+                  <Route
+                    path="camera"
+                    element={
+                      <NavRoleRoute navItem="camera">
+                        <CameraScreen />
+                      </NavRoleRoute>
+                    }
+                  >
                     <Route path=":deviceId" />
                   </Route>
                 </Routes>

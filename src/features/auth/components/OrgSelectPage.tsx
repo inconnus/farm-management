@@ -1,22 +1,11 @@
 import type { OrgMembership } from '@store/orgStore';
+import { canAccessNavItem, ORG_ROLE_COLOR, ORG_ROLE_LABEL } from '@shared/lib/permissions';
 import { useAtomValue } from 'jotai';
 import type { Location } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthLoadingAtom, organizationsAtom } from '../store';
 import { getSafeRedirectPath } from '../returnToPath';
-
-const roleLabelMap: Record<string, string> = {
-  owner: 'เจ้าของ',
-  admin: 'ผู้ดูแล',
-  member: 'สมาชิก',
-};
-
-const roleColorMap: Record<string, string> = {
-  owner: 'bg-amber-100 text-amber-800',
-  admin: 'bg-blue-100 text-blue-800',
-  member: 'bg-gray-100 text-gray-700',
-};
 
 export function OrgSelectPage() {
   const navigate = useNavigate();
@@ -27,12 +16,14 @@ export function OrgSelectPage() {
 
   const handleSelect = (org: OrgMembership) => {
     const from = (location.state as { from?: Location } | null)?.from;
-    const target = getSafeRedirectPath(from, org.slug);
+    const target = getSafeRedirectPath(from, org.slug, org.role);
     if (target) {
       navigate(target, { replace: true });
       return;
     }
-    navigate(`/${org.slug}/farms`, { replace: true });
+    navigate(`/${org.slug}/${canAccessNavItem(org.role, 'farms') ? 'farms' : 'dashboard'}`, {
+      replace: true,
+    });
   };
 
   const handleSignOut = async () => {
@@ -190,9 +181,9 @@ export function OrgSelectPage() {
                     {org.name}
                   </span>
                   <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${roleColorMap[org.role] ?? roleColorMap.member}`}
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ORG_ROLE_COLOR[org.role] ?? ORG_ROLE_COLOR.member}`}
                   >
-                    {roleLabelMap[org.role] ?? org.role}
+                    {ORG_ROLE_LABEL[org.role] ?? org.role}
                   </span>
                 </div>
                 {org.description && (

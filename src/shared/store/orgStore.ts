@@ -4,7 +4,7 @@ import { atom } from 'jotai';
 export type Organization = Tables<'organizations'>;
 
 export type OrgMembership = Organization & {
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member' | 'viewer';
 };
 
 const STORAGE_KEY = 'farm-mgmt:current-org-id';

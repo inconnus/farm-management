@@ -2,6 +2,7 @@ export * as authApi from './api';
 export { AuthProvider } from './components/AuthProvider';
 export { ForgotPasswordPage } from './components/ForgotPasswordPage';
 export { LoginPage } from './components/LoginPage';
+export { NavRoleRoute } from './components/NavRoleRoute';
 export { OrgRequiredRoute } from './components/OrgRequiredRoute';
 export { OrgSelectPage } from './components/OrgSelectPage';
 export { ProtectedRoute } from './components/ProtectedRoute';

@@ -4,6 +4,7 @@ import { supabase } from '@shared/lib/supabase/client';
 import type { Enums, Tables } from '@shared/lib/supabase/database.types';
 import {
   CrownIcon,
+  EyeIcon,
   MailIcon,
   RadioIcon,
   ShieldCheckIcon,
@@ -68,18 +69,21 @@ const ROLE_LABEL: Record<OrgMemberRole, string> = {
   owner: 'เจ้าของ',
   admin: 'ผู้ดูแล',
   member: 'สมาชิก',
+  viewer: 'ผู้ชม',
 };
 
 const ROLE_ICON: Record<OrgMemberRole, React.ReactNode> = {
   owner: <CrownIcon className="size-3 text-amber-500" />,
   admin: <ShieldCheckIcon className="size-3 text-blue-500" />,
   member: <UserIcon className="size-3 text-gray-400" />,
+  viewer: <EyeIcon className="size-3 text-purple-500" />,
 };
 
 const ROLE_BADGE: Record<OrgMemberRole, string> = {
   owner: 'bg-amber-50 text-amber-700 border-amber-200',
   admin: 'bg-blue-50 text-blue-700 border-blue-200',
   member: 'bg-gray-50 text-gray-600 border-gray-200',
+  viewer: 'bg-purple-50 text-purple-700 border-purple-200',
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
