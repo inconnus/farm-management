@@ -4,8 +4,10 @@ import { useAtomValue } from 'jotai';
 import { iotDeviceQueries, landQueries } from '../data/queries';
 
 export const useIOTDevicesQuery = () => {
+  const sensorApiSettings = useAtomValue(sensorApiSettingsAtom);
+
   return useQuery({
-    ...iotDeviceQueries.all(),
+    ...iotDeviceQueries.all(sensorApiSettings),
   });
 };
 

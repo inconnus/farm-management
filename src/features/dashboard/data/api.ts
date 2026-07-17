@@ -1,3 +1,6 @@
+import type { SensorApiSettings } from '@shared/store/sensorApiStore';
+import { pickMockOnlineIds } from './mockIotDevices';
+
 export interface IOTDevice {
   _id: string;
   appIotId: string;
@@ -17,7 +20,7 @@ export interface IOTDevice {
     sensor_soil_humid_ph?: number;
     sensor_soil_humid_ec?: number;
     sensor_v_in?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -43,27 +46,24 @@ export interface TelemetryResponse {
     sensor_soil_humid_ph?: number;
     sensor_soil_humid_ec?: number;
     sensor_v_in?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }[];
 }
 
 // ── Mock telemetry config ──────────────────────────────────────────
-// กำหนดช่วง min-max ของแต่ละค่าเซ็นเซอร์สำหรับ mock devices
 export const MOCK_TELEMETRY_RANGES = {
   sensor_ambient_humid: { min: 55, max: 85 },
   sensor_ambient_temperature: { min: 25, max: 38 },
   sensor_soil_humid_humid: { min: 15, max: 45 },
   sensor_soil_humid_temperature: { min: 28, max: 36 },
   sensor_voltage_v_in: { min: 20, max: 26 },
+  sensor_soil_humid_ph: { min: 5.8, max: 7.2 },
+  sensor_soil_humid_ec: { min: 0.8, max: 2.4 },
 };
 
 /** สุ่มค่าระหว่าง min–max (ทศนิยม 2 ตำแหน่ง) */
 const randBetween = (min: number, max: number) =>
   Math.round((Math.random() * (max - min) + min) * 100) / 100;
-
-/** Set ของ appIotId ที่เป็น mock — ใช้ตรวจสอบใน fetchIOTDeviceTelemetry */
-const mockAppIotIds = new Set<string>();
-// จะถูก populate หลังจาก mockIOTDevices ถูก define (ด้านล่าง)
 
 function generateMockTelemetry(): TelemetryResponse {
   const r = MOCK_TELEMETRY_RANGES;
@@ -102,12 +102,34 @@ function generateMockTelemetry(): TelemetryResponse {
           r.sensor_voltage_v_in.min,
           r.sensor_voltage_v_in.max,
         ),
+        sensor_soil_humid_ph: randBetween(
+          r.sensor_soil_humid_ph.min,
+          r.sensor_soil_humid_ph.max,
+        ),
+        sensor_soil_humid_ec: randBetween(
+          r.sensor_soil_humid_ec.min,
+          r.sensor_soil_humid_ec.max,
+        ),
       },
     ],
   };
 }
 
-import type { SensorApiSettings } from '@shared/store/sensorApiStore';
+/** ชุด appIotId ที่ mock เป็นออนไลน์ — อัปเดตตอน fetchIOTDevices */
+let mockOnlineIds = new Set<string>();
+
+function isMockOnline(appIotId: string): boolean {
+  // ถ้ายังไม่ถูก populate (race ช่วงแรก) → ประมาณ 87% จาก hash ของ id
+  if (mockOnlineIds.size === 0) {
+    let hash = 2166136261;
+    for (let i = 0; i < appIotId.length; i++) {
+      hash ^= appIotId.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash % 100 < 87;
+  }
+  return mockOnlineIds.has(appIotId);
+}
 
 const KASETKORN_AUTH_TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzc2Njk0MjUzfQ.Y8Edwh77zTpohMffVloQRy8O8EO6NsDY3CIwg6dvCNo';
@@ -130,14 +152,30 @@ function pickLatestTelemetry(
   })[0];
 }
 
+async function fetchRealIOTDevices(): Promise<IOTDevice[]> {
+  const response = await fetch(
+    'https://api.kasetkorn.app/api/iot/setup/GetIotAll',
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch IoT devices');
+  }
+  const apiDevices = await response
+    .json()
+    .then((data) => data.data as IOTDevice[]);
+  return [...apiDevices];
+}
+
 export const fetchIOTDeviceTelemetry = async (
   appIotId: string,
   settings: SensorApiSettings,
 ): Promise<TelemetryResponse> => {
-  // ถ้าเป็น mock device → return dummy data ทันที (ไม่เรียก API จริง)
-  // if (mockAppIotIds.has(appIotId)) {
-  //   return generateMockTelemetry();
-  // }
+  if (settings.useMockData) {
+    // ออฟไลน์ → ไม่มี telemetry
+    if (!isMockOnline(appIotId)) {
+      return { data: [] };
+    }
+    return generateMockTelemetry();
+  }
 
   if (settings.mode === 'all') {
     const response = await fetch(
@@ -169,118 +207,23 @@ export const fetchIOTDeviceTelemetry = async (
   return response.json();
 };
 
-const mockIOTDevices: IOTDevice[] = [
-  {
-    _id: '69c2959b6928f8e78c62834b',
-    appIotId: 'KS_E49DD971FE69',
-    appIotName: 'แปลงทดสอบสันทราย เชียงใหม่ - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบสันทราย เชียงใหม่ - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'สันป่าเปา',
-    amphur: 'สันทราย',
-    province: 'เชียงใหม่',
-    lat: 18.8331,
-    lon: 99.057354,
-  },
-  {
-    _id: '69c2959b6928f8e78c62834c',
-    appIotId: 'KS_E49DD971FE6A',
-    appIotName: 'แปลงนำร่องตำบลพระบาท ลำปาง - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงนำร่องตำบลพระบาท ลำปาง - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'พระบาท',
-    amphur: 'เมืองลำปาง',
-    province: 'ลำปาง',
-    lat: 18.279062,
-    lon: 99.488498,
-  },
-  {
-    _id: '69c2959b6928f8e78c62834d',
-    appIotId: 'KS_E49DD971FE6B',
-    appIotName: 'แปลงทดสอบ ศรีราชา ชลบุรี - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบ ศรีราชา ชลบุรี - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'บางพระ',
-    amphur: 'ศรีราชา',
-    province: 'ชลบุรี',
-    lat: 13.244617,
-    lon: 100.994689,
-  },
-  {
-    _id: '69c2959b6928f8e78c62834e',
-    appIotId: 'KS_E49DD971FE6C',
-    appIotName: 'แปลงทดสอบ มโนรมย์ ชัยนาท - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบ มโนรมย์ ชัยนาท - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'หางน้ำสาคร',
-    amphur: 'มโนรมย์',
-    province: 'ชัยนาท',
-    lat: 15.297043,
-    lon: 100.190748,
-  },
-  {
-    _id: '69c2959b6928f8e78c62834f',
-    appIotId: 'KS_E49DD971FE6D',
-    appIotName: 'แปลงทดสอบ อำเภอเมืองขอนแก่น ขอนแก่น - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบ อำเภอเมืองขอนแก่น ขอนแก่น - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'ศิลา',
-    amphur: 'เมืองขอนแก่น',
-    province: 'เมืองขอนแก่น',
-    lat: 16.489979,
-    lon: 102.83292,
-  },
-  {
-    _id: '69c2959b6928f8e78c628350',
-    appIotId: 'KS_E49DD971FE6E',
-    appIotName: 'แปลงทดสอบ ควนขนุน พัทลุง - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบ ควนขนุน พัทลุง - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'ปันแต',
-    amphur: 'ควนขนุน',
-    province: 'พัทลุง',
-    lat: 7.778141,
-    lon: 100.025671,
-  },
-  {
-    _id: '69c2959b6928f8e78c628351',
-    appIotId: 'KS_E49DD971FE6F',
-    appIotName: 'แปลงทดสอบ ศรีสัชนาลัย สุโขทัย - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    appFarmerId: 'FM1751268124',
-    appFarmId: 'FD1775552732740',
-    appFarmName: 'แปลงทดสอบ ศรีสัชนาลัย สุโขทัย - บริษัท แอโร กรุ๊ป (1992) จำกัด',
-    tambon: 'บ้านตึก',
-    amphur: 'ศรีสัชนาลัย',
-    province: 'สุโขทัย',
-    lat: 17.589397287467573,
-    lon: 99.81072511735451,
-  },
-];
+export const fetchIOTDevices = async (
+  settings?: Pick<SensorApiSettings, 'useMockData'>,
+): Promise<IOTDevice[]> => {
+  const apiDevices = await fetchRealIOTDevices();
 
-// Populate mock IDs set
-// for (const d of mockIOTDevices) mockAppIotIds.add(d.appIotId);
-export const fetchIOTDevices = async (): Promise<IOTDevice[]> => {
-  const response = await fetch(
-    'https://api.kasetkorn.app/api/iot/setup/GetIotAll',
-  );
-  if (!response.ok) {
-    throw new Error('Failed to fetch IoT devices');
+  if (settings?.useMockData) {
+    // จำนวนเท่าของจริง — mock แค่สถานะ online ~87%
+    mockOnlineIds = pickMockOnlineIds(apiDevices);
+  } else {
+    mockOnlineIds = new Set();
   }
-  const apiDevices = await response
-    .json()
-    .then((data) => data.data as IOTDevice[]);
-  return [...apiDevices,];
+
+  return apiDevices;
 };
 
 export interface LandResponse {
-  // Assuming a generic return type or any if unspecified
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const fetchGetLand = async (

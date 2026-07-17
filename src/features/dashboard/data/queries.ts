@@ -3,10 +3,10 @@ import { queryOptions } from '@tanstack/react-query';
 import { fetchGetLand, fetchIOTDevices, fetchIOTDeviceTelemetry } from './api';
 
 export const iotDeviceQueries = {
-  all: () =>
+  all: (sensorApiSettings: Pick<SensorApiSettings, 'useMockData'>) =>
     queryOptions({
-      queryKey: ['iot-devices'] as const,
-      queryFn: fetchIOTDevices,
+      queryKey: ['iot-devices', sensorApiSettings.useMockData] as const,
+      queryFn: () => fetchIOTDevices(sensorApiSettings),
     }),
   telemetry: (
     appIotId: string | undefined,
@@ -18,6 +18,7 @@ export const iotDeviceQueries = {
         appIotId,
         sensorApiSettings.mode,
         sensorApiSettings.timeRange,
+        sensorApiSettings.useMockData,
       ] as const,
       queryFn: () => fetchIOTDeviceTelemetry(appIotId!, sensorApiSettings),
       enabled: !!appIotId,

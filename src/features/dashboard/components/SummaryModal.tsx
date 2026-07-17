@@ -223,9 +223,9 @@ export const SummaryModal = ({
                       {/* Donut hole */}
                       <div className="absolute w-[84px] h-[84px] bg-gray-50 rounded-full flex flex-col items-center justify-center">
                         <span className="text-gray-800 font-bold text-xl leading-none">
-                          {stats.total}
+                          {Math.round(onlinePercent)}%
                         </span>
-                        <span className="text-gray-500 text-[10px]">อุปกรณ์</span>
+                        <span className="text-gray-500 text-[10px]">ออนไลน์</span>
                       </div>
                     </div>
                     {/* Legend */}

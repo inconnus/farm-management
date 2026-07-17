@@ -5,6 +5,8 @@ export type SensorApiMode = 'last' | 'all';
 export type SensorApiSettings = {
   mode: SensorApiMode;
   timeRange: string;
+  /** ใช้ข้อมูล mock แทน API จริง (สำหรับ demo / mockup) */
+  useMockData: boolean;
 };
 
 export const SENSOR_TIME_OPTIONS = [
@@ -20,6 +22,7 @@ const STORAGE_KEY = 'farm-mgmt:sensor-api-settings';
 const DEFAULT_SETTINGS: SensorApiSettings = {
   mode: 'last',
   timeRange: '-1d',
+  useMockData: false,
 };
 
 function loadSettings(): SensorApiSettings {
@@ -32,6 +35,7 @@ function loadSettings(): SensorApiSettings {
       mode: parsed.mode,
       timeRange:
         typeof parsed.timeRange === 'string' ? parsed.timeRange : '-1d',
+      useMockData: parsed.useMockData === true,
     };
   } catch {
     return DEFAULT_SETTINGS;

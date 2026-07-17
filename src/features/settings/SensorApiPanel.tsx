@@ -4,6 +4,7 @@ import {
   sensorApiSettingsAtom,
   setSensorApiSettingsAtom,
 } from '@shared/store/sensorApiStore';
+import { Description, Switch } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { RadioIcon } from 'lucide-react';
@@ -29,13 +30,17 @@ export const SensorApiPanel = ({ isActive }: SensorApiPanelProps) => {
 
   const hasChanges =
     draft.mode !== currentSettings.mode ||
-    draft.timeRange !== currentSettings.timeRange;
+    draft.timeRange !== currentSettings.timeRange ||
+    draft.useMockData !== currentSettings.useMockData;
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       setSensorApiSettings(draft);
-      await queryClient.invalidateQueries({ queryKey: ['iot-telemetry'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['iot-devices'] }),
+        queryClient.invalidateQueries({ queryKey: ['iot-telemetry'] }),
+      ]);
     } finally {
       setIsSaving(false);
     }
@@ -62,6 +67,30 @@ export const SensorApiPanel = ({ isActive }: SensorApiPanelProps) => {
 
       <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
         <section className="flex flex-col gap-3">
+          <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            ข้อมูล Mock
+          </span>
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3">
+            <Switch
+              isSelected={draft.useMockData}
+              onChange={(isSelected) =>
+                setDraft((prev) => ({ ...prev, useMockData: isSelected }))
+              }
+            >
+              <Switch.Content>
+                <Switch.Control className="data-[selected=true]:bg-[#03662c]">
+                  <Switch.Thumb />
+                </Switch.Control>
+                Mock Sensor
+              </Switch.Content>
+            
+            </Switch>
+          </div>
+        </section>
+
+        <section
+          className={`flex flex-col gap-3 ${draft.useMockData ? 'opacity-40 pointer-events-none' : ''}`}
+        >
           <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
             รูปแบบ API
           </span>
@@ -109,7 +138,7 @@ export const SensorApiPanel = ({ isActive }: SensorApiPanelProps) => {
           </label>
         </section>
 
-        {draft.mode === 'all' && (
+        {draft.mode === 'all' && !draft.useMockData && (
           <section className="flex flex-col gap-2">
             <label
               htmlFor="sensor-time-range"
@@ -146,9 +175,11 @@ export const SensorApiPanel = ({ isActive }: SensorApiPanelProps) => {
             <span className="text-xs font-semibold">กำลังใช้งาน</span>
           </div>
           <p className="text-xs text-gray-600">
-            {currentSettings.mode === 'last'
-              ? 'GET /api/iot/read/last/{UID}'
-              : `POST /api/iot/read/all — time: ${currentSettings.timeRange}`}
+            {currentSettings.useMockData
+              ? 'Mock telemetry — จำนวนเท่า API จริง · ออนไลน์ ~87%'
+              : currentSettings.mode === 'last'
+                ? 'GET /api/iot/read/last/{UID}'
+                : `POST /api/iot/read/all — time: ${currentSettings.timeRange}`}
           </p>
         </section>
       </div>
