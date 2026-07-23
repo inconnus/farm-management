@@ -1,7 +1,9 @@
 import { sensorApiSettingsAtom } from '@shared/store/sensorApiStore';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
-import { iotDeviceQueries, landQueries } from '../data/queries';
+import { cameraQueries, iotDeviceQueries, landQueries } from '../data/queries';
+
+export const useCamerasQuery = () => useQuery({ ...cameraQueries.all() });
 
 export const useIOTDevicesQuery = () => {
   const sensorApiSettings = useAtomValue(sensorApiSettingsAtom);

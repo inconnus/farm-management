@@ -1,6 +1,12 @@
 import type { SensorApiSettings } from '@shared/store/sensorApiStore';
 import { queryOptions } from '@tanstack/react-query';
-import { fetchGetLand, fetchIOTDevices, fetchIOTDeviceTelemetry } from './api';
+import {
+  fetchAllCameras,
+  fetchGetLand,
+  fetchIOTDevices,
+  fetchIOTDeviceTelemetry,
+} from './api';
+import { kasetkornCameraToCameraData } from './cameras';
 
 export const iotDeviceQueries = {
   all: (sensorApiSettings: Pick<SensorApiSettings, 'useMockData'>) =>
@@ -23,6 +29,17 @@ export const iotDeviceQueries = {
       queryFn: () => fetchIOTDeviceTelemetry(appIotId!, sensorApiSettings),
       enabled: !!appIotId,
       select: (data) => ({ appIotId, telemetry: data?.data?.[0] }),
+    }),
+};
+
+export const cameraQueries = {
+  all: () =>
+    queryOptions({
+      queryKey: ['kasetkorn-cameras'] as const,
+      queryFn: async () => {
+        const items = await fetchAllCameras();
+        return items.map(kasetkornCameraToCameraData);
+      },
     }),
 };
 

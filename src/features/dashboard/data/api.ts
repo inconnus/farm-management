@@ -226,6 +226,36 @@ export interface LandResponse {
   [key: string]: unknown;
 }
 
+export interface KasetkornCamera {
+  _id: string;
+  appIotId: string;
+  deviceName: string;
+  deviceSerial: string;
+  validateCode: string;
+  appFarmerId: string;
+  tambon: string;
+  amphur: string;
+  province: string;
+  lat: number;
+  lon: number;
+  isPTZ: boolean;
+  siteId?: string;
+}
+
+const KASETKORN_CAMERA_API_BASE = 'https://api-dev.kasetkorn.com';
+
+export const fetchAllCameras = async (): Promise<KasetkornCamera[]> => {
+  const response = await fetch(
+    `${KASETKORN_CAMERA_API_BASE}/api/camera/GetCameraAll`,
+    { headers: kasetkornAuthHeaders },
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch cameras');
+  }
+  const json = (await response.json()) as { data?: KasetkornCamera[] };
+  return json.data ?? [];
+};
+
 export const fetchGetLand = async (
   appFarmId: string,
 ): Promise<LandResponse> => {

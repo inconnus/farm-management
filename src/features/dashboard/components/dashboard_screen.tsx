@@ -1,6 +1,6 @@
 import { Column, Row } from '@app/layout';
-import { MOCK_DASHBOARD_CAMERAS } from '@features/dashboard/data/mockCameras';
 import {
+  useCamerasQuery,
   useIOTDevicesQuery,
   useIOTTelemetryQueries,
   useLandsQueries,
@@ -46,6 +46,7 @@ const LandTypeColor: Record<string, string> = {
 
 const DashboardScreen = () => {
   const { data: iotDevices } = useIOTDevicesQuery();
+  const { data: cameras = [] } = useCamerasQuery();
 
   // Get unique appFarmIds from iotDevices to fetch their land data
   const appFarmIds = Array.from(
@@ -113,14 +114,17 @@ const DashboardScreen = () => {
   }, [iotDevices, searchTerm]);
 
   const filteredCameras = useMemo(() => {
-    if (!searchTerm) return MOCK_DASHBOARD_CAMERAS;
+    if (!searchTerm) return cameras;
     const lower = searchTerm.toLowerCase();
-    return MOCK_DASHBOARD_CAMERAS.filter(
+    return cameras.filter(
       (c) =>
         c.name.toLowerCase().includes(lower) ||
-        c.id.toLowerCase().includes(lower),
+        c.id.toLowerCase().includes(lower) ||
+        (c.province?.toLowerCase() || '').includes(lower) ||
+        (c.amphur?.toLowerCase() || '').includes(lower) ||
+        (c.tambon?.toLowerCase() || '').includes(lower),
     );
-  }, [searchTerm]);
+  }, [cameras, searchTerm]);
 
   const dashboardPolygons = useMemo(() => {
     const polygons: Array<{
@@ -394,7 +398,8 @@ const DashboardScreen = () => {
                           </span>
                           <Chip className="w-fit mt-0.5 bg-gray-100">
                             <Chip.Label className="text-[11px] text-gray-500">
-                              กล้อง · ปทุมธานี
+                              กล้อง
+                              {cam.province ? ` · ${cam.province}` : ''}
                             </Chip.Label>
                           </Chip>
                         </Column>

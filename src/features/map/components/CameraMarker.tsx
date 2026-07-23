@@ -10,6 +10,9 @@ export type CameraData = {
   name: string;
   lat: number;
   lng: number;
+  province?: string;
+  amphur?: string;
+  tambon?: string;
   /** `hik` = ISGP + ezuikit-js, อื่นๆ = webrtc / m3u8 / stream ตามลำดับเดิม */
   mode?: CameraPlayerMode;
   /** พารามิเตอร์ ISGP API (เมื่อ mode === 'hik') */
