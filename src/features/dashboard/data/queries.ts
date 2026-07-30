@@ -2,6 +2,7 @@ import type { SensorApiSettings } from '@shared/store/sensorApiStore';
 import { queryOptions } from '@tanstack/react-query';
 import {
   fetchAllCameras,
+  fetchCameraToken,
   fetchGetLand,
   fetchIOTDevices,
   fetchIOTDeviceTelemetry,
@@ -37,8 +38,11 @@ export const cameraQueries = {
     queryOptions({
       queryKey: ['kasetkorn-cameras'] as const,
       queryFn: async () => {
-        const items = await fetchAllCameras();
-        return items.map(kasetkornCameraToCameraData);
+        const [accessToken, items] = await Promise.all([
+          fetchCameraToken(),
+          fetchAllCameras(),
+        ]);
+        return items.map((cam) => kasetkornCameraToCameraData(cam, accessToken));
       },
     }),
 };

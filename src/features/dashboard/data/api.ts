@@ -132,7 +132,9 @@ function isMockOnline(appIotId: string): boolean {
 }
 
 const KASETKORN_AUTH_TOKEN =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzc2Njk0MjUzfQ.Y8Edwh77zTpohMffVloQRy8O8EO6NsDY3CIwg6dvCNo';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBGYXJtZXJJZCI6IkZNMTc1MTI2ODEyNCIsIm1vYmlsZU5vIjoiMDAwMCIsImlkQ2FyZCI6IjMyMjM0NDMiLCJsZXZlbCI6MSwiZXhwIjoxNzg1NDAxODc3fQ.QPfBWGXBfA3IUJCkbBHkTdeP4KD_AWyBe3apzOGAVaY';
+
+const KASETKORN_API_BASE = 'https://api.kasetkorn.app';
 
 const kasetkornAuthHeaders = {
   Authorization: `Bearer ${KASETKORN_AUTH_TOKEN}`,
@@ -242,11 +244,24 @@ export interface KasetkornCamera {
   siteId?: string;
 }
 
-const KASETKORN_CAMERA_API_BASE = 'https://api-dev.kasetkorn.com';
+export const fetchCameraToken = async (): Promise<string> => {
+  const response = await fetch(
+    `${KASETKORN_API_BASE}/api/camera/GetToken`,
+    { headers: kasetkornAuthHeaders },
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch camera token');
+  }
+  const json = (await response.json()) as { Authorization?: string };
+  if (!json.Authorization) {
+    throw new Error('Camera token missing in response');
+  }
+  return json.Authorization;
+};
 
 export const fetchAllCameras = async (): Promise<KasetkornCamera[]> => {
   const response = await fetch(
-    `${KASETKORN_CAMERA_API_BASE}/api/camera/GetCameraAll`,
+    `${KASETKORN_API_BASE}/api/camera/GetCameraAll`,
     { headers: kasetkornAuthHeaders },
   );
   if (!response.ok) {
