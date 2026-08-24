@@ -65,6 +65,7 @@ type FarmMarkerProps = {
 export function FarmMarker({ farm, onClick }: FarmMarkerProps) {
   return (
     <MapMarkerMount
+      id={farm.id}
       lat={farm.lat}
       lng={farm.lng}
       onClick={() => onClick?.(farm)}

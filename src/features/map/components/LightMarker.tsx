@@ -69,7 +69,7 @@ type LightMarkerProps = {
 };
 
 export const LightMarker = ({ light, onClick }: LightMarkerProps) => (
-  <MapMarkerMount lat={light.lat} lng={light.lng}>
+  <MapMarkerMount id={light.id} lat={light.lat} lng={light.lng}>
     <LightMarkerFace item={light} onClick={onClick} />
   </MapMarkerMount>
 );

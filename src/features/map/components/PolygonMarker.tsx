@@ -5,6 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { toValidLngLat } from '../utils/lngLat';
 
 const getPolygonPixelSize = (
   map: mapboxgl.Map,
@@ -30,9 +31,11 @@ const getPolygonPixelSize = (
 };
 
 export const PolygonMarker = ({
+  id,
   coords,
   children,
 }: {
+  id?: string | number;
   coords: [number, number][];
   children: React.ReactNode;
 }) => {
@@ -50,16 +53,18 @@ export const PolygonMarker = ({
     const polygonGeoJSON = turf.polygon([coords]);
     const centroid = turf.centroid(polygonGeoJSON);
     const [lng, lat] = centroid.geometry.coordinates;
+    const lngLat = toValidLngLat(lng, lat, { source: 'PolygonMarker', id });
+    if (!lngLat) return;
     const marker = new mapboxgl.Marker({
       element: markerNode,
       anchor: 'center',
     })
-      .setLngLat([lng, lat])
+      .setLngLat(lngLat)
       .addTo(map);
     return () => {
       marker.remove();
     };
-  }, [map, coords, markerNode]);
+  }, [map, id, coords, markerNode]);
 
   useEffect(() => {
     if (!map || !coords) return;

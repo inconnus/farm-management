@@ -103,7 +103,7 @@ type CameraMarkerProps = {
 };
 
 export const CameraMarker = ({ camera, onClick }: CameraMarkerProps) => (
-  <MapMarkerMount lat={camera.lat} lng={camera.lng}>
+  <MapMarkerMount id={camera.id} lat={camera.lat} lng={camera.lng}>
     <CameraMarkerFace item={camera} onClick={onClick} />
   </MapMarkerMount>
 );

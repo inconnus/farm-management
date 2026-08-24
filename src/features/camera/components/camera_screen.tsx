@@ -338,6 +338,7 @@ const CameraScreen = () => {
             {selectedCamera && (
                 <MapMarkerMount
                     key={selectedCamera.id}
+                    id={selectedCamera.id}
                     lat={parseFloat(selectedCamera.lat)}
                     lng={parseFloat(selectedCamera.lng)}
                     openPopupSignal={1}

@@ -295,7 +295,7 @@ export const FarmsSidebar = () => {
           />
           {lands.map((item) =>
             !vehicleOverlayActive ? (
-              <PolygonMarker key={item.id} coords={item.coords}>
+              <PolygonMarker key={item.id} id={item.id} coords={item.coords}>
                 <TaskLabel
                   name={item.name}
                   taskCount={taskCountByLand.get(item.id) ?? 0}

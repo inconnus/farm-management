@@ -9,8 +9,11 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { toValidLngLat } from '../utils/lngLat';
 
 type MapMarkerMountProps = {
+  /** entity id สำหรับ log เมื่อ lat/lng ไม่ถูกต้อง */
+  id?: string | number;
   lat: number;
   lng: number;
   children?: ReactNode;
@@ -28,6 +31,7 @@ type MapMarkerMountProps = {
 };
 
 export function MapMarkerMount({
+  id,
   lat,
   lng,
   children,
@@ -55,11 +59,23 @@ export function MapMarkerMount({
   useLayoutEffect(() => {
     if (!map) return;
 
-    const marker = new mapboxgl.Marker({
-      element: hasCustomMarker ? markerNode : undefined,
-      anchor,
-      ...(offset && { offset }),
-    }).setLngLat([lng, lat]);
+    const lngLat = toValidLngLat(lng, lat, { source: 'MapMarkerMount', id });
+    if (!lngLat) return;
+
+    let marker: mapboxgl.Marker;
+    try {
+      marker = new mapboxgl.Marker({
+        element: hasCustomMarker ? markerNode : undefined,
+        anchor,
+        ...(offset && { offset }),
+      }).setLngLat(lngLat);
+    } catch (error) {
+      console.warn(
+        `[MapMarkerMount] setLngLat threw, skipping marker — id=${id ?? 'unknown'}`,
+        { id: id ?? 'unknown', lng, lat, lngLat, error },
+      );
+      return;
+    }
 
     markerRef.current = marker;
 
@@ -115,7 +131,18 @@ export function MapMarkerMount({
       marker.remove();
       markerRef.current = null;
     };
-  }, [map, lat, lng, markerNode, hasPopup, hasCustomMarker, markerClassName, anchor, offset]);
+  }, [
+    map,
+    id,
+    lat,
+    lng,
+    markerNode,
+    hasPopup,
+    hasCustomMarker,
+    markerClassName,
+    anchor,
+    offset,
+  ]);
 
   useEffect(() => {
     if (!closePopupSignal) return;

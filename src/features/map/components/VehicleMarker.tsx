@@ -55,7 +55,7 @@ type VehicleMarkerProps = {
 
 /** @deprecated ใช้ VehicleMapMarkerOverlay แทน */
 export const VehicleMarker = ({ vehicle, onClick }: VehicleMarkerProps) => (
-  <MapMarkerMount lat={vehicle.lat} lng={vehicle.lng} anchor="bottom">
+  <MapMarkerMount id={vehicle.id} lat={vehicle.lat} lng={vehicle.lng} anchor="bottom">
     <VehicleMarkerFace item={vehicle} onClick={onClick} />
   </MapMarkerMount>
 );

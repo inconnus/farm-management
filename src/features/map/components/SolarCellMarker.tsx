@@ -96,7 +96,7 @@ type SolarCellMarkerProps = {
 };
 
 export const SolarCellMarker = ({ device, onClick }: SolarCellMarkerProps) => (
-  <MapMarkerMount lat={device.lat} lng={device.lng}>
+  <MapMarkerMount id={device.id} lat={device.lat} lng={device.lng}>
     <SolarCellMarkerFace item={device} onClick={onClick} />
   </MapMarkerMount>
 );

@@ -458,6 +458,7 @@ const DashboardScreen = () => {
           return (
             <MapMarkerMount
               key={device._id}
+              id={device._id}
               lat={device.lat}
               lng={device.lon}
               closePopupSignal={closePopupSignal}
@@ -600,7 +601,7 @@ const DashboardScreen = () => {
               coords={poly.coords}
               properties={poly.properties}
             />
-            <PolygonMarker coords={poly.coords}>
+            <PolygonMarker id={poly.id} coords={poly.coords}>
               <TaskLabel name={poly.name} />
             </PolygonMarker>
           </React.Fragment>
