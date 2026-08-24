@@ -31,11 +31,26 @@ type FarmClustersMountProps = {
   onFarmClick: (farmId: string) => void;
 };
 
-function removeFarmLayers(map: mapboxgl.Map) {
-  for (const id of LAYER_IDS) {
-    if (map.getLayer(id)) map.removeLayer(id);
+function isMapUsable(map: mapboxgl.Map | null | undefined): map is mapboxgl.Map {
+  if (!map) return false;
+  try {
+    // After map.remove(), style is torn down and getLayer/getSource crash.
+    return map.getStyle() != null;
+  } catch {
+    return false;
   }
-  if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+}
+
+function removeFarmLayers(map: mapboxgl.Map) {
+  if (!isMapUsable(map)) return;
+  try {
+    for (const id of LAYER_IDS) {
+      if (map.getLayer(id)) map.removeLayer(id);
+    }
+    if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+  } catch {
+    // Map may be mid-destroy during logout / route change.
+  }
 }
 
 function buildFeatureCollection(
@@ -157,10 +172,10 @@ export function FarmClustersMount({
 
   // Mount source/layers + interaction handlers; survive style switches.
   useEffect(() => {
-    if (!map) return;
+    if (!isMapUsable(map)) return;
 
     const ensure = () => {
-      if (!map.isStyleLoaded()) return;
+      if (!isMapUsable(map) || !map.isStyleLoaded()) return;
 
       if (!visible) {
         removeFarmLayers(map);
@@ -195,6 +210,7 @@ export function FarmClustersMount({
         features?: mapboxgl.MapboxGeoJSONFeature[];
       },
     ) => {
+      if (!isMapUsable(map)) return;
       const feature = e.features?.[0];
       if (!feature || feature.geometry.type !== 'Point') return;
 
@@ -207,7 +223,7 @@ export function FarmClustersMount({
       if (!source) return;
 
       source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err || zoom == null) return;
+        if (err || zoom == null || !isMapUsable(map)) return;
         map.easeTo({
           center: feature.geometry.coordinates as [number, number],
           zoom,
@@ -228,9 +244,11 @@ export function FarmClustersMount({
     };
 
     const setPointer = () => {
+      if (!isMapUsable(map)) return;
       map.getCanvas().style.cursor = 'pointer';
     };
     const clearPointer = () => {
+      if (!isMapUsable(map)) return;
       map.getCanvas().style.cursor = '';
     };
 
@@ -246,25 +264,34 @@ export function FarmClustersMount({
     map.on('mouseleave', POINT_LAYER_ID, clearPointer);
 
     return () => {
-      map.off('style.load', ensure);
-      map.off('load', ensure);
-      map.off('click', CLUSTER_LAYER_ID, onClusterClick);
-      map.off('click', POINT_LAYER_ID, onPointClick);
-      map.off('mouseenter', CLUSTER_LAYER_ID, setPointer);
-      map.off('mouseleave', CLUSTER_LAYER_ID, clearPointer);
-      map.off('mouseenter', POINT_LAYER_ID, setPointer);
-      map.off('mouseleave', POINT_LAYER_ID, clearPointer);
-      removeFarmLayers(map);
+      if (!isMapUsable(map)) return;
+      try {
+        map.off('style.load', ensure);
+        map.off('load', ensure);
+        map.off('click', CLUSTER_LAYER_ID, onClusterClick);
+        map.off('click', POINT_LAYER_ID, onPointClick);
+        map.off('mouseenter', CLUSTER_LAYER_ID, setPointer);
+        map.off('mouseleave', CLUSTER_LAYER_ID, clearPointer);
+        map.off('mouseenter', POINT_LAYER_ID, setPointer);
+        map.off('mouseleave', POINT_LAYER_ID, clearPointer);
+        removeFarmLayers(map);
+      } catch {
+        // Ignore teardown races on logout.
+      }
     };
   }, [map, visible]);
 
   // Push data updates without remounting layers.
   useEffect(() => {
-    if (!map || !visible) return;
-    const source = map.getSource(SOURCE_ID) as
-      | mapboxgl.GeoJSONSource
-      | undefined;
-    if (source) source.setData(geojson);
+    if (!isMapUsable(map) || !visible) return;
+    try {
+      const source = map.getSource(SOURCE_ID) as
+        | mapboxgl.GeoJSONSource
+        | undefined;
+      if (source) source.setData(geojson);
+    } catch {
+      // Map may already be destroyed.
+    }
   }, [map, visible, geojson]);
 
   return null;

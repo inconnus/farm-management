@@ -689,6 +689,18 @@ export type Database = {
         Returns: string
       }
       can_access_farm: { Args: { p_farm_id: string }; Returns: boolean }
+      create_org_farm: {
+        Args: {
+          p_country?: string | null
+          p_district?: string | null
+          p_lat: number
+          p_lng: number
+          p_name: string
+          p_org_id: string
+          p_province?: string | null
+        }
+        Returns: Database["public"]["Tables"]["farms"]["Row"]
+      }
       get_my_farm_ids: { Args: never; Returns: string[] }
       get_my_org_ids: { Args: never; Returns: string[] }
       haversine_km: {

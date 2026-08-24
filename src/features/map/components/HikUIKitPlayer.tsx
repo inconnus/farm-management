@@ -82,7 +82,7 @@ export function HikUIKitPlayer({
           signal: abort.signal,
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${params.accessToken}`,
+            Authorization: `Bearer ${params.accessToken ?? ''}`,
           },
           body: JSON.stringify({
             deviceSerial: params.deviceSerial,

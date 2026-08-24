@@ -1,7 +1,7 @@
 /** Hikvision ISGP / Ezviz — config จาก farm_devices.config */
 export type HikCameraParams = {
-  /** Bearer token สำหรับเรียก ISGP API (hpc.xxx) */
-  accessToken: string;
+  /** Bearer token สำหรับเรียก ISGP API — ถ้าไม่มีจะดึงจาก GetToken ตอนเล่น */
+  accessToken?: string;
   deviceSerial: string;
   channelNo?: number | string;
   code?: string;

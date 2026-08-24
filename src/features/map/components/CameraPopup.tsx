@@ -1,5 +1,8 @@
 import { Column, Row } from '@app/layout';
+import { fetchCameraToken } from '@features/dashboard/data/api';
+import type { HikCameraParams } from '@features/map/types/hikUIKit';
 import { Card } from '@heroui/react';
+import { useQuery } from '@tanstack/react-query';
 import { CctvIcon } from 'lucide-react';
 import ReactPlayer from 'react-player';
 import type { CameraData } from './CameraMarker';
@@ -17,26 +20,85 @@ type CameraPopupProps = {
   url?: string;
 };
 
+function HikLivePlayer({
+  cameraId,
+  hik,
+}: {
+  cameraId: string;
+  hik: HikCameraParams;
+}) {
+  const storedToken = hik.accessToken?.trim() || '';
+  const tokenQuery = useQuery({
+    queryKey: ['camera-access-token'] as const,
+    queryFn: fetchCameraToken,
+    enabled: !storedToken,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  const accessToken = storedToken || tokenQuery.data || '';
+
+  if (!hik.deviceSerial) {
+    return (
+      <Column className="items-center justify-center h-full w-full gap-3 text-gray-400 bg-gray-900">
+        <CctvIcon size={36} />
+        <span className="text-sm text-center px-4">
+          ตั้งค่า Hik ไม่ครบ (ต้องมี deviceSerial)
+        </span>
+      </Column>
+    );
+  }
+
+  if (!storedToken && tokenQuery.isLoading) {
+    return (
+      <Column className="items-center justify-center h-full w-full gap-3 text-gray-300 bg-gray-900">
+        <CctvIcon size={36} />
+        <span className="text-sm">กำลังขอ access token…</span>
+      </Column>
+    );
+  }
+
+  if (!accessToken) {
+    return (
+      <Column className="items-center justify-center h-full w-full gap-3 text-red-300 bg-gray-900">
+        <CctvIcon size={36} />
+        <span className="text-sm text-center px-4">
+          {tokenQuery.error instanceof Error
+            ? tokenQuery.error.message
+            : 'ขอ camera access token ไม่สำเร็จ'}
+        </span>
+      </Column>
+    );
+  }
+
+  const params: HikCameraParams = {
+    ...hik,
+    accessToken,
+  };
+
+  return (
+    <HikUIKitPlayer
+      key={`${cameraId}-${accessToken.slice(0, 12)}`}
+      instanceKey={cameraId}
+      params={params}
+      className="h-full w-full"
+    />
+  );
+}
+
 function CameraVideoBody({ camera, url }: CameraPopupProps) {
   if (camera.mode === 'hik') {
-    if (!camera.hik?.accessToken || !camera.hik?.deviceSerial) {
+    if (!camera.hik?.deviceSerial) {
       return (
         <Column className="items-center justify-center h-full w-full gap-3 text-gray-400 bg-gray-900">
           <CctvIcon size={36} />
           <span className="text-sm text-center px-4">
-            ตั้งค่า Hik ไม่ครบ (ต้องมี accessToken, deviceSerial)
+            ตั้งค่า Hik ไม่ครบ (ต้องมี deviceSerial)
           </span>
         </Column>
       );
     }
-    return (
-      <HikUIKitPlayer
-        key={camera.id}
-        instanceKey={camera.id}
-        params={camera.hik}
-        className="h-full w-full"
-      />
-    );
+    return <HikLivePlayer cameraId={camera.id} hik={camera.hik} />;
   }
   if (camera.webrtcUrl) {
     return <WebRTCPlayer url={camera.webrtcUrl} />;

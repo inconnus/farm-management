@@ -28,15 +28,16 @@ export type CameraData = {
 function readHikParams(
   config: Record<string, unknown>,
 ): HikCameraParams | undefined {
-  const accessToken =
-    (config.access_token as string) || (config.accessToken as string);
   const deviceSerial =
     (config.device_serial as string) || (config.deviceSerial as string);
-  if (!accessToken || !deviceSerial) return undefined;
+  if (!deviceSerial?.trim()) return undefined;
+
+  const accessToken =
+    (config.access_token as string) || (config.accessToken as string) || '';
 
   return {
-    accessToken,
-    deviceSerial,
+    accessToken: accessToken.trim() || undefined,
+    deviceSerial: deviceSerial.trim(),
     channelNo:
       (config.channel_no as number | string) ??
       (config.channelNo as number | string) ??

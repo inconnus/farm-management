@@ -108,8 +108,16 @@ export async function updateFarm(
 }
 
 export async function deleteFarm(farmId: string): Promise<void> {
-  const { error } = await supabase.from('farms').delete().eq('id', farmId);
+  const { data, error } = await supabase
+    .from('farms')
+    .delete()
+    .eq('id', farmId)
+    .select('id');
+
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('ไม่มีสิทธิ์ลบฟาร์ม หรือไม่พบข้อมูล');
+  }
 }
 
 export type UpdateLandInput = {
@@ -146,22 +154,19 @@ export async function deleteLand(landId: string): Promise<void> {
 }
 
 export async function createFarm(input: CreateFarmInput): Promise<DbFarm> {
-  const { data, error } = await supabase
-    .from('farms')
-    .insert({
-      name: input.name,
-      organization_id: input.organizationId,
-      lat: input.lat,
-      lng: input.lng,
-      district: input.district ?? null,
-      province: input.province ?? null,
-      country: input.country ?? null,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('create_org_farm', {
+    p_org_id: input.organizationId,
+    p_name: input.name,
+    p_lat: input.lat,
+    p_lng: input.lng,
+    p_district: input.district ?? null,
+    p_province: input.province ?? null,
+    p_country: input.country ?? null,
+  });
 
   if (error) throw error;
-  return data;
+  if (!data) throw new Error('สร้างฟาร์มไม่สำเร็จ');
+  return data as DbFarm;
 }
 
 // ─── Queries ─────────────────────────────────────────────
