@@ -1,5 +1,5 @@
-import mapboxgl from 'mapbox-gl';
 import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
+import mapboxgl from 'mapbox-gl';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 

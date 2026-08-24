@@ -146,10 +146,8 @@ function pickLatestTelemetry(
   if (data.length === 0) return undefined;
   if (data.length === 1) return data[0];
   return [...data].sort((a, b) => {
-    const ta =
-      (a.time ? new Date(a.time).getTime() : 0) || a.sensor_ts || 0;
-    const tb =
-      (b.time ? new Date(b.time).getTime() : 0) || b.sensor_ts || 0;
+    const ta = (a.time ? new Date(a.time).getTime() : 0) || a.sensor_ts || 0;
+    const tb = (b.time ? new Date(b.time).getTime() : 0) || b.sensor_ts || 0;
     return tb - ta;
   })[0];
 }
@@ -180,17 +178,14 @@ export const fetchIOTDeviceTelemetry = async (
   }
 
   if (settings.mode === 'all') {
-    const response = await fetch(
-      'https://api.kasetkorn.app/api/iot/read/all',
-      {
-        method: 'POST',
-        headers: {
-          ...kasetkornAuthHeaders,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ UID: appIotId, time: settings.timeRange }),
+    const response = await fetch('https://api.kasetkorn.app/api/iot/read/all', {
+      method: 'POST',
+      headers: {
+        ...kasetkornAuthHeaders,
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({ UID: appIotId, time: settings.timeRange }),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch telemetry');
     }
@@ -245,10 +240,9 @@ export interface KasetkornCamera {
 }
 
 export const fetchCameraToken = async (): Promise<string> => {
-  const response = await fetch(
-    `${KASETKORN_API_BASE}/api/camera/GetToken`,
-    { headers: kasetkornAuthHeaders },
-  );
+  const response = await fetch(`${KASETKORN_API_BASE}/api/camera/GetToken`, {
+    headers: kasetkornAuthHeaders,
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch camera token');
   }
@@ -274,16 +268,13 @@ export const fetchAllCameras = async (): Promise<KasetkornCamera[]> => {
 export const fetchGetLand = async (
   appFarmId: string,
 ): Promise<LandResponse> => {
-  const response = await fetch(
-    'https://api.kasetkorn.app/api/land/GetLand',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ appFarmId }),
+  const response = await fetch('https://api.kasetkorn.app/api/land/GetLand', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({ appFarmId }),
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch land data');
   }

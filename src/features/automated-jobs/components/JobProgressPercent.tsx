@@ -1,8 +1,8 @@
-import type { VehicleData } from '@features/vehicles/types';
 import {
   useLiveJobProgress,
   vehicleToProgressInput,
 } from '@features/automated-jobs/hooks/useLiveJobProgress';
+import type { VehicleData } from '@features/vehicles/types';
 
 type JobProgressPercentProps = {
   vehicle: VehicleData;

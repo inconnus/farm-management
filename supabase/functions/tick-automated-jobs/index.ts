@@ -19,7 +19,10 @@ function parseWorkPath(value: unknown): WorkPath {
 
 function measurePathLengthKm(path: WorkPath): number {
   if (path.length < 2) return 0.001;
-  return Math.max(turf.length(turf.lineString(path), { units: 'kilometers' }), 0.001);
+  return Math.max(
+    turf.length(turf.lineString(path), { units: 'kilometers' }),
+    0.001,
+  );
 }
 
 function computeProgress(
@@ -51,12 +54,20 @@ async function tickWorkingJobs(supabase: ReturnType<typeof createClient>) {
     if (path.length < 2 || !job.started_at) continue;
 
     const pathLengthKm = job.path_length_km ?? measurePathLengthKm(path);
-    const factor = job.simulation_speed_factor ?? DEFAULT_SIMULATION_SPEED_FACTOR;
+    const factor =
+      job.simulation_speed_factor ?? DEFAULT_SIMULATION_SPEED_FACTOR;
     const speedKmh = job.speed_kmh ?? 4.2;
-    const progress = computeProgress(job.started_at, speedKmh, pathLengthKm, factor);
+    const progress = computeProgress(
+      job.started_at,
+      speedKmh,
+      pathLengthKm,
+      factor,
+    );
 
     const line = turf.lineString(path);
-    const point = turf.along(line, pathLengthKm * Math.min(progress, 1), { units: 'kilometers' });
+    const point = turf.along(line, pathLengthKm * Math.min(progress, 1), {
+      units: 'kilometers',
+    });
     const [lng, lat] = point.geometry.coordinates;
 
     if (progress >= 1) {
@@ -119,13 +130,19 @@ Deno.serve(async (req) => {
       };
 
       if (!device_id || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-        return new Response(JSON.stringify({ error: 'device_id, lat, lng required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'device_id, lat, lng required' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
       }
 
-      await supabase.from('farm_devices').update({ lat, lng }).eq('id', device_id);
+      await supabase
+        .from('farm_devices')
+        .update({ lat, lng })
+        .eq('id', device_id);
 
       if (job_id) {
         const { data: job } = await supabase
@@ -138,12 +155,18 @@ Deno.serve(async (req) => {
           const path = parseWorkPath(job.work_path);
           if (path.length >= 2) {
             const line = turf.lineString(path);
-            const snapped = turf.nearestPointOnLine(line, turf.point([lng!, lat!]));
-            const pathLengthKm = job.path_length_km ?? measurePathLengthKm(path);
+            const snapped = turf.nearestPointOnLine(
+              line,
+              turf.point([lng!, lat!]),
+            );
+            const pathLengthKm =
+              job.path_length_km ?? measurePathLengthKm(path);
             const progress = Math.min(
               1,
               turf.length(
-                turf.lineSlice(line, turf.point(path[0]), snapped, { units: 'kilometers' }),
+                turf.lineSlice(line, turf.point(path[0]), snapped, {
+                  units: 'kilometers',
+                }),
                 { units: 'kilometers' },
               ) / pathLengthKm,
             );

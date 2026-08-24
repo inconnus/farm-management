@@ -172,7 +172,8 @@ export function MapPolygonDrawMount({
 
     // Remove features whose server UUIDs are no longer in the lands list.
     // Use UUID pattern to avoid touching temporary MapboxDraw-generated IDs.
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const UUID_RE =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     for (const f of draw.getAll().features) {
       const fid = String(f.id);
       if (UUID_RE.test(fid) && !serverIdSet.has(fid)) {

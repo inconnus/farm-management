@@ -1,42 +1,64 @@
 import { Column, Row } from '@app/layout';
+import { useIOTTelemetryQueries } from '@features/dashboard/hooks';
+import { useDeleteDeviceMutation } from '@features/devices/hooks/useDeleteDeviceMutation';
+import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
 import {
-  toCameraData,
-  toLightData,
-  toSolarCellData,
   type CameraData,
   type LightData,
+  type SensorData,
   type SolarCellData,
+  toCameraData,
+  toLightData,
+  toSensorData,
+  toSolarCellData,
 } from '@features/map/components';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
-import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
+import {
+  useDeleteTask,
+  useUpdateTask,
+} from '@features/tasks/hooks/useLandTasksQuery';
+import {
+  type DbTask,
+  useTasksQuery,
+} from '@features/tasks/hooks/useTasksQuery';
+import {
+  Button,
+  Chip,
+  Dropdown,
+  Label,
+  Modal,
+  Separator,
+  Tabs,
+} from '@heroui/react';
+import { DropdownMenu } from '@shared/ui/DropdownMenu';
+import type { SidebarNavAPI } from '@shared/ui/SidebarNav/types';
 import { mapInstanceAtom } from '@store/mapStore';
 import { selectLandAtom } from '@store/selectionStore';
-import type { SidebarNavAPI } from '@shared/ui/SidebarNav/types';
-import { Button, Chip, Modal, Separator, Tabs } from '@heroui/react';
-import { DropdownMenu } from '@shared/ui/DropdownMenu';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
   Calendar,
   CctvIcon,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   Layers,
   Pencil,
+  RadioTower,
   SearchIcon,
   SolarPanelIcon,
   SunIcon,
   Trash2,
   UserRound,
 } from 'lucide-react';
+import mapboxgl from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCreateLand } from '../hooks/useCreateLand';
+import { useDeleteLand, useUpdateLand } from '../hooks/useLandMutations';
 import type { Farm } from '../transforms';
 import { CreateLandModal, type LandInitialValues } from './CreateLandModal';
-import { useCreateLand } from '../hooks/useCreateLand';
-import { useTasksQuery, type DbTask } from '@features/tasks/hooks/useTasksQuery';
-import { useDeleteTask, useUpdateTask } from '@features/tasks/hooks/useLandTasksQuery';
-import { useDeleteLand, useUpdateLand } from '../hooks/useLandMutations';
-import mapboxgl from 'mapbox-gl';
+import { ImportCameraModal } from './ImportCameraModal';
+import { ImportSensorModal } from './ImportSensorModal';
 
 type Props = {
   farm: Farm;
@@ -48,7 +70,12 @@ type Props = {
 
 const LAND_MENU_ITEMS = [
   { id: 'edit', label: 'แก้ไขแปลง', icon: <Pencil size={13} /> },
-  { id: 'delete', label: 'ลบแปลง', icon: <Trash2 size={13} />, variant: 'danger' as const },
+  {
+    id: 'delete',
+    label: 'ลบแปลง',
+    icon: <Trash2 size={13} />,
+    variant: 'danger' as const,
+  },
 ];
 
 type EditLandState = LandInitialValues & { id: string };
@@ -57,23 +84,54 @@ type EditLandState = LandInitialValues & { id: string };
 
 const SUMMARY_TASK_MENU_ITEMS = [
   { id: 'edit', label: 'แก้ไข', icon: <Pencil size={13} /> },
-  { id: 'delete', label: 'ลบ', icon: <Trash2 size={13} />, variant: 'danger' as const },
+  {
+    id: 'delete',
+    label: 'ลบ',
+    icon: <Trash2 size={13} />,
+    variant: 'danger' as const,
+  },
+];
+
+const DEVICE_MENU_ITEMS = [
+  {
+    id: 'delete',
+    label: 'ลบอุปกรณ์',
+    icon: <Trash2 size={13} />,
+    variant: 'danger' as const,
+  },
 ];
 
 type SummaryFilterKey = 'all' | 'pending' | 'in_progress' | 'completed';
+type FarmDetailTab = 'summary' | 'overview' | 'analytics';
 
 const SUMMARY_STATUS_META: Record<
   'pending' | 'in_progress' | 'completed',
   { label: string; dot: string; badge: string }
 > = {
-  pending:     { label: 'รอยืนยัน',        dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-700' },
-  in_progress: { label: 'กำลังดำเนินการ',  dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700' },
-  completed:   { label: 'สำเร็จ',           dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
+  pending: {
+    label: 'รอยืนยัน',
+    dot: 'bg-sky-400',
+    badge: 'bg-sky-50 text-sky-700',
+  },
+  in_progress: {
+    label: 'กำลังดำเนินการ',
+    dot: 'bg-amber-400',
+    badge: 'bg-amber-50 text-amber-700',
+  },
+  completed: {
+    label: 'สำเร็จ',
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700',
+  },
 };
 
 function formatTaskDueDate(dueDate: string | null): string | undefined {
   if (!dueDate) return undefined;
-  return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dueDate));
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(dueDate));
 }
 
 // ─── FarmSummaryPanel ─────────────────────────────────────────────────────────
@@ -99,12 +157,15 @@ const FarmSummaryPanel = ({
 
   const tasks = useMemo<DbTask[]>(() => dbTasks ?? [], [dbTasks]);
 
-  const counts = useMemo(() => ({
-    all:         tasks.length,
-    pending:     tasks.filter((t) => t.status === 'pending').length,
-    in_progress: tasks.filter((t) => t.status === 'in_progress').length,
-    completed:   tasks.filter((t) => t.status === 'completed').length,
-  }), [tasks]);
+  const counts = useMemo(
+    () => ({
+      all: tasks.length,
+      pending: tasks.filter((t) => t.status === 'pending').length,
+      in_progress: tasks.filter((t) => t.status === 'in_progress').length,
+      completed: tasks.filter((t) => t.status === 'completed').length,
+    }),
+    [tasks],
+  );
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
@@ -112,9 +173,10 @@ const FarmSummaryPanel = ({
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(
-        (t) => t.title.toLowerCase().includes(q)
-          || (t.description ?? '').toLowerCase().includes(q)
-          || (t.land?.name ?? '').toLowerCase().includes(q),
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          (t.description ?? '').toLowerCase().includes(q) ||
+          (t.land?.name ?? '').toLowerCase().includes(q),
       );
     }
     return result;
@@ -122,7 +184,6 @@ const FarmSummaryPanel = ({
 
   return (
     <Column className="flex-1 min-h-0 overflow-hidden flex flex-col gap-2 pt-1">
-
       {/* ── Stats cards ── */}
       <div className="grid grid-cols-2 gap-2 px-1 shrink-0">
         <div className="rounded-xl bg-black/5 px-3 py-2.5 flex items-center gap-2.5">
@@ -130,7 +191,9 @@ const FarmSummaryPanel = ({
             <Layers size={15} className="text-green-700" />
           </div>
           <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{farm.lands.length}</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">
+              {farm.lands.length}
+            </p>
             <p className="text-[10px] text-gray-500 mt-0.5">แปลงที่ดิน</p>
           </div>
         </div>
@@ -139,7 +202,9 @@ const FarmSummaryPanel = ({
             <ClipboardList size={15} className="text-blue-600" />
           </div>
           <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{counts.all}</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">
+              {counts.all}
+            </p>
             <p className="text-[10px] text-gray-500 mt-0.5">งานทั้งหมด</p>
           </div>
         </div>
@@ -148,7 +213,9 @@ const FarmSummaryPanel = ({
             <CctvIcon size={15} className="text-gray-600" />
           </div>
           <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{cameras.length}</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">
+              {cameras.length}
+            </p>
             <p className="text-[10px] text-gray-500 mt-0.5">กล้อง</p>
           </div>
         </div>
@@ -157,7 +224,9 @@ const FarmSummaryPanel = ({
             <SolarPanelIcon size={15} className="text-amber-600" />
           </div>
           <div>
-            <p className="text-lg font-bold text-gray-900 leading-none">{solarCells.length}</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">
+              {solarCells.length}
+            </p>
             <p className="text-[10px] text-gray-500 mt-0.5">โซลาร์เซลล์</p>
           </div>
         </div>
@@ -174,8 +243,16 @@ const FarmSummaryPanel = ({
               onClick={() => setFilter(active ? 'all' : s)}
               className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
             >
-              <span className={`text-base font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
-              <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
+              <span
+                className={`text-base font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}
+              >
+                {counts[s]}
+              </span>
+              <span
+                className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}
+              >
+                {m.label}
+              </span>
             </button>
           );
         })}
@@ -186,16 +263,21 @@ const FarmSummaryPanel = ({
       {/* ── Task list ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {isLoading ? (
-          <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงาน…</div>
+          <div className="py-8 text-center text-sm text-gray-400">
+            กำลังโหลดงาน…
+          </div>
         ) : filteredTasks.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-400">
             {search ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงานในฟาร์มนี้'}
           </div>
         ) : (
           filteredTasks.map((task, i) => {
-            const statusKey = task.status === 'pending' || task.status === 'in_progress' || task.status === 'completed'
-              ? task.status
-              : null;
+            const statusKey =
+              task.status === 'pending' ||
+              task.status === 'in_progress' ||
+              task.status === 'completed'
+                ? task.status
+                : null;
             const meta = statusKey ? SUMMARY_STATUS_META[statusKey] : null;
             const dueLabel = formatTaskDueDate(task.due_date);
             const assigneeName = task.assignee?.full_name ?? 'ยังไม่มอบหมาย';
@@ -205,21 +287,31 @@ const FarmSummaryPanel = ({
                 <div className="rounded-xl px-3 py-2.5 hover:bg-black/5 transition-colors group">
                   <div className="flex items-start gap-2">
                     {meta && (
-                      <span className={`mt-1 shrink-0 size-2 rounded-full block ${meta.dot}`} />
+                      <span
+                        className={`mt-1 shrink-0 size-2 rounded-full block ${meta.dot}`}
+                      />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1">
-                        <span className="text-sm font-semibold text-gray-900 leading-snug block">{task.title}</span>
+                        <span className="text-sm font-semibold text-gray-900 leading-snug block">
+                          {task.title}
+                        </span>
                         {landName && (
-                          <span className="shrink-0 text-[10px] text-gray-400 bg-black/5 rounded-md px-1.5 py-0.5 ml-1 mt-0.5">{landName}</span>
+                          <span className="shrink-0 text-[10px] text-gray-400 bg-black/5 rounded-md px-1.5 py-0.5 ml-1 mt-0.5">
+                            {landName}
+                          </span>
                         )}
                       </div>
                       {task.description && (
-                        <span className="text-xs text-gray-500 block mt-0.5 line-clamp-2">{task.description}</span>
+                        <span className="text-xs text-gray-500 block mt-0.5 line-clamp-2">
+                          {task.description}
+                        </span>
                       )}
                       <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                         {meta && (
-                          <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${meta.badge}`}>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${meta.badge}`}
+                          >
                             {meta.label}
                           </span>
                         )}
@@ -246,7 +338,9 @@ const FarmSummaryPanel = ({
                     </div>
                   </div>
                 </div>
-                {i < filteredTasks.length - 1 && <Separator className="my-0.5" />}
+                {i < filteredTasks.length - 1 && (
+                  <Separator className="my-0.5" />
+                )}
               </div>
             );
           })
@@ -275,32 +369,62 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
   const setDevicePopup = useSetAtom(devicePopupAtom);
 
   const [isCreateLandModalOpen, setIsCreateLandModalOpen] = useState(false);
+  const [isImportSensorModalOpen, setIsImportSensorModalOpen] = useState(false);
+  const [isImportCameraModalOpen, setIsImportCameraModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<FarmDetailTab>('summary');
   const [search, setSearch] = useState('');
   const [editingTask, setEditingTask] = useState<DbTask | null>(null);
   const [editingLand, setEditingLand] = useState<EditLandState | null>(null);
-  const { mutate: createLand, isPending: isCreatingLand, error: createLandError, reset: resetCreateLand } = useCreateLand(farm.id);
+  const {
+    mutate: createLand,
+    isPending: isCreatingLand,
+    error: createLandError,
+    reset: resetCreateLand,
+  } = useCreateLand(farm.id);
   const deleteTask = useDeleteTask();
   const updateTask = useUpdateTask();
   const updateLand = useUpdateLand();
   const deleteLand = useDeleteLand();
+  const deleteDevice = useDeleteDeviceMutation();
 
   // ─── Tasks (for land task counts) ─────────────────────────────────────────
 
   const { data: dbTasks } = useTasksQuery(farm.id);
 
-  const handleDeleteTask = useCallback((taskId: string) => {
-    const task = dbTasks?.find((t) => t.id === taskId);
-    if (!task?.land_id) return;
-    deleteTask.mutate({ taskId, landId: task.land_id, farmId: farm.id });
-  }, [deleteTask, dbTasks, farm.id]);
+  const handleDeleteTask = useCallback(
+    (taskId: string) => {
+      const task = dbTasks?.find((t) => t.id === taskId);
+      if (!task?.land_id) return;
+      deleteTask.mutate({ taskId, landId: task.land_id, farmId: farm.id });
+    },
+    [deleteTask, dbTasks, farm.id],
+  );
 
-  const handleEditTaskSubmit = useCallback((data: { title: string; description?: string; dueDate?: string | null; assignedTo?: string | null }) => {
-    if (!editingTask) return;
-    updateTask.mutate(
-      { input: { taskId: editingTask.id, title: data.title, description: data.description ?? null, dueDate: data.dueDate, assignedTo: data.assignedTo }, landId: editingTask.land_id ?? '', farmId: farm.id },
-      { onSuccess: () => setEditingTask(null) },
-    );
-  }, [updateTask, editingTask, farm.id]);
+  const handleEditTaskSubmit = useCallback(
+    (data: {
+      title: string;
+      description?: string;
+      dueDate?: string | null;
+      assignedTo?: string | null;
+    }) => {
+      if (!editingTask) return;
+      updateTask.mutate(
+        {
+          input: {
+            taskId: editingTask.id,
+            title: data.title,
+            description: data.description ?? null,
+            dueDate: data.dueDate,
+            assignedTo: data.assignedTo,
+          },
+          landId: editingTask.land_id ?? '',
+          farmId: farm.id,
+        },
+        { onSuccess: () => setEditingTask(null) },
+      );
+    },
+    [updateTask, editingTask, farm.id],
+  );
   const taskCountByLand = useMemo(() => {
     const map: Record<string, number> = {};
     for (const t of dbTasks ?? []) {
@@ -313,17 +437,47 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
 
   const { data: dbDevices } = useDevicesQuery(farm.id);
   const cameras = useMemo<CameraData[]>(
-    () => dbDevices?.filter((d) => d.device_type === 'camera').map(toCameraData) ?? [],
+    () =>
+      dbDevices?.filter((d) => d.device_type === 'camera').map(toCameraData) ??
+      [],
     [dbDevices],
   );
   const solarCells = useMemo<SolarCellData[]>(
-    () => dbDevices?.filter((d) => d.device_type === 'solar_cell').map(toSolarCellData) ?? [],
+    () =>
+      dbDevices
+        ?.filter((d) => d.device_type === 'solar_cell')
+        .map(toSolarCellData) ?? [],
     [dbDevices],
   );
   const lights = useMemo<LightData[]>(
-    () => dbDevices?.filter((d) => d.device_type === 'light').map(toLightData) ?? [],
+    () =>
+      dbDevices?.filter((d) => d.device_type === 'light').map(toLightData) ??
+      [],
     [dbDevices],
   );
+  const sensors = useMemo<SensorData[]>(
+    () =>
+      dbDevices?.filter((d) => d.device_type === 'sensor').map(toSensorData) ??
+      [],
+    [dbDevices],
+  );
+  const sensorAppIotIds = useMemo(
+    () => sensors.map((s) => s.appIotId).filter(Boolean),
+    [sensors],
+  );
+  const sensorTelemetryQueries = useIOTTelemetryQueries(
+    sensorAppIotIds,
+    activeTab === 'analytics',
+  );
+  const sensorTelemetryMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    sensorTelemetryQueries.forEach((q) => {
+      if (q.data?.appIotId) {
+        map.set(q.data.appIotId, !!q.data.telemetry);
+      }
+    });
+    return map;
+  }, [sensorTelemetryQueries]);
 
   // ─── Search filtering ─────────────────────────────────────────────────────
 
@@ -331,7 +485,9 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
     if (!search.trim()) return farm.lands;
     const q = search.trim().toLowerCase();
     return farm.lands.filter(
-      (l) => l.name.toLowerCase().includes(q) || (l.type ?? '').toLowerCase().includes(q),
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        (l.type ?? '').toLowerCase().includes(q),
     );
   }, [farm.lands, search]);
 
@@ -353,10 +509,25 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
     return lights.filter((l) => l.name.toLowerCase().includes(q));
   }, [lights, search]);
 
+  const filteredSensors = useMemo(() => {
+    if (!search.trim()) return sensors;
+    const q = search.trim().toLowerCase();
+    return sensors.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.appIotId.toLowerCase().includes(q) ||
+        (s.province ?? '').toLowerCase().includes(q),
+    );
+  }, [sensors, search]);
+
   // ─── Land navigation ──────────────────────────────────────────────────────
 
   const navigateToLand = useCallback(
-    (landId: string, coords: [number, number][], landData: Farm['lands'][number]) => {
+    (
+      landId: string,
+      coords: [number, number][],
+      landData: Farm['lands'][number],
+    ) => {
       selectLand(landData);
       if (mapInstance) zoomToLandBounds(mapInstance, coords);
       nav.push(landId);
@@ -397,7 +568,11 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
       <Separator className="my-2" />
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <Tabs className="w-full max-w-md flex-1 min-h-0 flex flex-col">
+        <Tabs
+          className="w-full max-w-md flex-1 min-h-0 flex flex-col"
+          selectedKey={activeTab}
+          onSelectionChange={(key) => setActiveTab(key as FarmDetailTab)}
+        >
           <Tabs.ListContainer className="shrink-0">
             <Tabs.List aria-label="Options" className="bg-black/5">
               <Tabs.Tab id="summary">
@@ -414,25 +589,49 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
               </Tabs.Tab>
             </Tabs.List>
           </Tabs.ListContainer>
-          <Tabs.Panel id="overview" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+          <Tabs.Panel
+            id="overview"
+            className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
+          >
             <Column className="flex-1 min-h-0 overflow-y-auto gap-1.5 camera-list-scroll">
               {filteredLands.map((landItem) => (
-                <div key={landItem.id} className="group flex items-center rounded-xl hover:bg-black/5 transition-colors shrink-0">
+                <div
+                  key={landItem.id}
+                  className="group flex items-center rounded-xl hover:bg-black/5 transition-colors shrink-0"
+                >
                   <button
                     type="button"
                     className="flex items-center gap-0 flex-1 min-w-0 p-2.5 text-left cursor-pointer"
-                    onClick={() => navigateToLand(landItem.id, landItem.coords, landItem)}
+                    onClick={() =>
+                      navigateToLand(landItem.id, landItem.coords, landItem)
+                    }
                   >
                     <div
                       className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
-                      style={{ background: `${landItem.color}22`, border: `1.5px solid ${landItem.color}55` }}
+                      style={{
+                        background: `${landItem.color}22`,
+                        border: `1.5px solid ${landItem.color}55`,
+                      }}
                     >
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: landItem.color }} />
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ background: landItem.color }}
+                      />
                     </div>
                     <Column className="ml-2.5 min-w-0">
-                      <span className="font-medium text-sm">{landItem.name}</span>
-                      <Chip className="w-fit mt-0.5" style={{ background: `${landItem.color}22`, color: landItem.color }}>
-                        <Chip.Label className="text-[11px]">{landItem.type}</Chip.Label>
+                      <span className="font-medium text-sm">
+                        {landItem.name}
+                      </span>
+                      <Chip
+                        className="w-fit mt-0.5"
+                        style={{
+                          background: `${landItem.color}22`,
+                          color: landItem.color,
+                        }}
+                      >
+                        <Chip.Label className="text-[11px]">
+                          {landItem.type}
+                        </Chip.Label>
                       </Chip>
                     </Column>
                     <div className="ml-auto flex items-center gap-2 shrink-0 pr-1">
@@ -453,7 +652,13 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                       items={LAND_MENU_ITEMS}
                       onAction={(action) => {
                         if (action === 'edit') {
-                          setEditingLand({ id: landItem.id, name: landItem.name, cropType: landItem.type ?? '', color: landItem.color ?? '#22c55e', coords: landItem.coords });
+                          setEditingLand({
+                            id: landItem.id,
+                            name: landItem.name,
+                            cropType: landItem.type ?? '',
+                            color: landItem.color ?? '#22c55e',
+                            coords: landItem.coords,
+                          });
                         }
                         if (action === 'delete') {
                           deleteLand.mutate(landItem.id);
@@ -480,14 +685,26 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
               </Button>
             </div>
           </Tabs.Panel>
-          <Tabs.Panel id="analytics" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+          <Tabs.Panel
+            id="analytics"
+            className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
+          >
             <Column className="flex-1 min-h-0 overflow-y-auto gap-1 camera-list-scroll">
               {filteredCameras.map((cam) => (
                 <Row
                   key={cam.id}
                   onClick={() => {
-                    if (mapInstance) mapInstance.flyTo({ center: [cam.lng, cam.lat], zoom: 17, duration: 800 });
-                    setDevicePopup({ type: 'camera', lngLat: [cam.lng, cam.lat], camera: cam });
+                    if (mapInstance)
+                      mapInstance.flyTo({
+                        center: [cam.lng, cam.lat],
+                        zoom: 17,
+                        duration: 800,
+                      });
+                    setDevicePopup({
+                      type: 'camera',
+                      lngLat: [cam.lng, cam.lat],
+                      camera: cam,
+                    });
                   }}
                   className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
                 >
@@ -496,12 +713,27 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white" />
                   </div>
                   <Column className="ml-2.5 min-w-0">
-                    <span className="font-medium text-sm truncate">{cam.name}</span>
+                    <span className="font-medium text-sm truncate">
+                      {cam.name}
+                    </span>
                     <Chip className="w-fit mt-0.5 bg-gray-100">
-                      <Chip.Label className="text-[11px] text-gray-500">กล้อง</Chip.Label>
+                      <Chip.Label className="text-[11px] text-gray-500">
+                        กล้อง
+                      </Chip.Label>
                     </Chip>
                   </Column>
-                  <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                  <div
+                    className="ml-auto flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu
+                      items={DEVICE_MENU_ITEMS}
+                      onAction={(action) => {
+                        if (action === 'delete') deleteDevice.mutate(cam.id);
+                      }}
+                    />
+                    <ChevronRight size={14} className="text-gray-300" />
+                  </div>
                 </Row>
               ))}
 
@@ -509,8 +741,17 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                 <Row
                   key={sc.id}
                   onClick={() => {
-                    if (mapInstance) mapInstance.flyTo({ center: [sc.lng, sc.lat], zoom: 17, duration: 800 });
-                    setDevicePopup({ type: 'solar', lngLat: [sc.lng, sc.lat], solar: sc });
+                    if (mapInstance)
+                      mapInstance.flyTo({
+                        center: [sc.lng, sc.lat],
+                        zoom: 17,
+                        duration: 800,
+                      });
+                    setDevicePopup({
+                      type: 'solar',
+                      lngLat: [sc.lng, sc.lat],
+                      solar: sc,
+                    });
                   }}
                   className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
                 >
@@ -518,14 +759,27 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                     <SolarPanelIcon size={16} className="text-amber-600" />
                   </div>
                   <Column className="ml-2.5 min-w-0">
-                    <span className="font-medium text-sm truncate">{sc.name}</span>
+                    <span className="font-medium text-sm truncate">
+                      {sc.name}
+                    </span>
                     <Chip className="w-fit mt-0.5 bg-amber-50">
                       <Chip.Label className="text-[11px] text-amber-600">
                         โซลาร์เซลล์ · {sc.capacityKw} kW
                       </Chip.Label>
                     </Chip>
                   </Column>
-                  <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                  <div
+                    className="ml-auto flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu
+                      items={DEVICE_MENU_ITEMS}
+                      onAction={(action) => {
+                        if (action === 'delete') deleteDevice.mutate(sc.id);
+                      }}
+                    />
+                    <ChevronRight size={14} className="text-gray-300" />
+                  </div>
                 </Row>
               ))}
 
@@ -533,37 +787,167 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                 <Row
                   key={light.id}
                   onClick={() => {
-                    if (mapInstance) mapInstance.flyTo({ center: [light.lng, light.lat], zoom: 17, duration: 800 });
-                    setDevicePopup({ type: 'light', lngLat: [light.lng, light.lat], light });
+                    if (mapInstance)
+                      mapInstance.flyTo({
+                        center: [light.lng, light.lat],
+                        zoom: 17,
+                        duration: 800,
+                      });
+                    setDevicePopup({
+                      type: 'light',
+                      lngLat: [light.lng, light.lat],
+                      light,
+                    });
                   }}
                   className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
                 >
                   <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center bg-yellow-50 border border-yellow-200 relative">
-                    <SunIcon size={16} className={light.isOn ? 'text-yellow-600' : 'text-yellow-700/50'} />
+                    <SunIcon
+                      size={16}
+                      className={
+                        light.isOn ? 'text-yellow-600' : 'text-yellow-700/50'
+                      }
+                    />
                     {light.isOn && (
                       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 border border-white" />
                     )}
                   </div>
                   <Column className="ml-2.5 min-w-0">
-                    <span className="font-medium text-sm truncate">{light.name}</span>
+                    <span className="font-medium text-sm truncate">
+                      {light.name}
+                    </span>
                     <Chip className="w-fit mt-0.5 bg-yellow-50">
                       <Chip.Label className="text-[11px] text-yellow-800">
-                        หลอดไฟ · {light.isOn ? 'เปิด' : 'ปิด'} · {light.brightness}%
+                        หลอดไฟ · {light.isOn ? 'เปิด' : 'ปิด'} ·{' '}
+                        {light.brightness}%
                       </Chip.Label>
                     </Chip>
                   </Column>
-                  <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                  <div
+                    className="ml-auto flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu
+                      items={DEVICE_MENU_ITEMS}
+                      onAction={(action) => {
+                        if (action === 'delete') deleteDevice.mutate(light.id);
+                      }}
+                    />
+                    <ChevronRight size={14} className="text-gray-300" />
+                  </div>
                 </Row>
               ))}
 
-              {filteredCameras.length === 0 && filteredSolarCells.length === 0 && filteredLights.length === 0 && (
-                <span className="text-center text-gray-400 py-4 text-sm">
-                  {search.trim() ? 'ไม่พบอุปกรณ์ที่ค้นหา' : 'ยังไม่มีอุปกรณ์'}
-                </span>
-              )}
+              {filteredSensors.map((sensor) => {
+                const isOnline =
+                  sensorTelemetryMap.get(sensor.appIotId) ?? false;
+                return (
+                  <Row
+                    key={sensor.id}
+                    onClick={() => {
+                      if (mapInstance) {
+                        mapInstance.flyTo({
+                          center: [sensor.lng, sensor.lat],
+                          zoom: 17,
+                          duration: 800,
+                        });
+                      }
+                      setDevicePopup({
+                        type: 'sensor',
+                        lngLat: [sensor.lng, sensor.lat],
+                        sensor,
+                      });
+                    }}
+                    className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+                  >
+                    <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center bg-sky-50 border border-sky-200 relative">
+                      <RadioTower size={16} className="text-sky-700" />
+                      <span
+                        className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white ${
+                          isOnline ? 'bg-green-500' : 'bg-red-400'
+                        }`}
+                      />
+                    </div>
+                    <Column className="ml-2.5 min-w-0">
+                      <span className="font-medium text-sm truncate">
+                        {sensor.name}
+                      </span>
+                      <Chip className="w-fit mt-0.5 bg-sky-50">
+                        <Chip.Label className="text-[11px] text-sky-700">
+                          เสาร์เซ็นเซอร์ · {isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
+                        </Chip.Label>
+                      </Chip>
+                      {sensor.province && (
+                        <span className="text-[10px] text-gray-400 truncate mt-0.5">
+                          {sensor.province}
+                        </span>
+                      )}
+                    </Column>
+                    <div
+                      className="ml-auto flex items-center gap-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu
+                        items={DEVICE_MENU_ITEMS}
+                        onAction={(action) => {
+                          if (action === 'delete') deleteDevice.mutate(sensor.id);
+                        }}
+                      />
+                      <ChevronRight size={14} className="text-gray-300" />
+                    </div>
+                  </Row>
+                );
+              })}
+
+              {filteredCameras.length === 0 &&
+                filteredSolarCells.length === 0 &&
+                filteredLights.length === 0 &&
+                filteredSensors.length === 0 && (
+                  <span className="text-center text-gray-400 py-4 text-sm">
+                    {search.trim() ? 'ไม่พบอุปกรณ์ที่ค้นหา' : 'ยังไม่มีอุปกรณ์'}
+                  </span>
+                )}
             </Column>
+
+            <div className="shrink-0 pt-2">
+              <Dropdown>
+                <Dropdown.Trigger className="w-full">
+                  <Button
+                    className="w-full bg-[#03662c] text-white hover:bg-[#03662c]/80 border border-[#03662c]/30 font-bold tracking-wider uppercase text-xs"
+                    size="lg"
+                  >
+                    เพิ่มอุปกรณ์
+                    <ChevronDown size={14} className="ml-1" />
+                  </Button>
+                </Dropdown.Trigger>
+                <Dropdown.Popover
+                  placement="top"
+                  className="min-w-[var(--trigger-width)]"
+                >
+                  <Dropdown.Menu
+                    aria-label="เพิ่มอุปกรณ์"
+                    onAction={(key) => {
+                      if (key === 'sensor') setIsImportSensorModalOpen(true);
+                      if (key === 'camera') setIsImportCameraModalOpen(true);
+                    }}
+                  >
+                    <Dropdown.Item id="sensor" textValue="เสาร์เซ็นเซอร์">
+                      <RadioTower className="size-4 shrink-0 text-muted" />
+                      <Label>เสาร์เซ็นเซอร์</Label>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="camera" textValue="กล้อง">
+                      <CctvIcon className="size-4 shrink-0 text-muted" />
+                      <Label>กล้อง</Label>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+            </div>
           </Tabs.Panel>
-          <Tabs.Panel id="summary" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2">
+          <Tabs.Panel
+            id="summary"
+            className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2"
+          >
             <FarmSummaryPanel
               farm={farm}
               cameras={cameras}
@@ -583,10 +967,19 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
           if (!open) resetCreateLand();
           setIsCreateLandModalOpen(open);
         }}
-        farmCenter={farm.lat != null && farm.lng != null ? { lat: farm.lat, lng: farm.lng } : null}
+        farmCenter={
+          farm.lat != null && farm.lng != null
+            ? { lat: farm.lat, lng: farm.lng }
+            : null
+        }
         onSubmit={(data) => {
           createLand(
-            { name: data.name, cropType: data.cropType, color: data.color, coords: data.coords },
+            {
+              name: data.name,
+              cropType: data.cropType,
+              color: data.color,
+              coords: data.coords,
+            },
             { onSuccess: () => setIsCreateLandModalOpen(false) },
           );
         }}
@@ -597,7 +990,9 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
       {/* Edit land */}
       <CreateLandModal
         isOpen={!!editingLand}
-        onOpenChange={(open) => { if (!open) setEditingLand(null); }}
+        onOpenChange={(open) => {
+          if (!open) setEditingLand(null);
+        }}
         initialValues={editingLand ?? undefined}
         onSubmit={(data) => {
           if (!editingLand) return;
@@ -623,6 +1018,20 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
         onClose={() => setEditingTask(null)}
         onSubmit={handleEditTaskSubmit}
       />
+
+      <ImportSensorModal
+        isOpen={isImportSensorModalOpen}
+        onOpenChange={setIsImportSensorModalOpen}
+        farmId={farm.id}
+        existingDevices={dbDevices}
+      />
+
+      <ImportCameraModal
+        isOpen={isImportCameraModalOpen}
+        onOpenChange={setIsImportCameraModalOpen}
+        farmId={farm.id}
+        existingDevices={dbDevices}
+      />
     </Column>
   );
 };
@@ -638,7 +1047,12 @@ function FarmEditTaskModal({
   task: DbTask | null;
   isPending: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; description?: string; dueDate?: string | null; assignedTo?: string | null }) => void;
+  onSubmit: (data: {
+    title: string;
+    description?: string;
+    dueDate?: string | null;
+    assignedTo?: string | null;
+  }) => void;
 }) {
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
@@ -655,19 +1069,33 @@ function FarmEditTaskModal({
 
   const handleSubmit = () => {
     const t = title.trim();
-    if (!t) { setTitleError(true); return; }
+    if (!t) {
+      setTitleError(true);
+      return;
+    }
     setTitleError(false);
-    onSubmit({ title: t, description: description.trim() || undefined, dueDate: dueDate || null });
+    onSubmit({
+      title: t,
+      description: description.trim() || undefined,
+      dueDate: dueDate || null,
+    });
   };
 
   return (
     <Modal>
-      <Modal.Backdrop isOpen={!!task} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Backdrop
+        isOpen={!!task}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
         <Modal.Container>
           <Modal.Dialog className="sm:max-w-lg bg-white text-gray-800 border border-gray-200 shadow-2xl">
             <Modal.CloseTrigger className="hover:bg-gray-100" />
             <Modal.Header className="border-b border-gray-100">
-              <Modal.Heading className="font-bold text-gray-800">แก้ไขงาน</Modal.Heading>
+              <Modal.Heading className="font-bold text-gray-800">
+                แก้ไขงาน
+              </Modal.Heading>
             </Modal.Header>
             <Modal.Body className="flex flex-col gap-4 py-4">
               <div className="flex flex-col gap-1.5">
@@ -679,10 +1107,14 @@ function FarmEditTaskModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
-                {titleError && <span className="text-xs text-red-600">กรุณากรอกชื่องาน</span>}
+                {titleError && (
+                  <span className="text-xs text-red-600">กรุณากรอกชื่องาน</span>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">รายละเอียด</label>
+                <label className="text-sm font-medium text-gray-700">
+                  รายละเอียด
+                </label>
                 <textarea
                   className="min-h-[88px] w-full resize-y rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#03662c]/30"
                   value={description}
@@ -691,7 +1123,9 @@ function FarmEditTaskModal({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">กำหนดเสร็จ</label>
+                <label className="text-sm font-medium text-gray-700">
+                  กำหนดเสร็จ
+                </label>
                 <input
                   type="date"
                   value={dueDate}
@@ -701,10 +1135,19 @@ function FarmEditTaskModal({
               </div>
             </Modal.Body>
             <Modal.Footer className="flex justify-end gap-2 border-t border-gray-100 pt-3">
-              <Button variant="ghost" className="font-semibold text-gray-700" onPress={onClose} isDisabled={isPending}>
+              <Button
+                variant="ghost"
+                className="font-semibold text-gray-700"
+                onPress={onClose}
+                isDisabled={isPending}
+              >
                 ยกเลิก
               </Button>
-              <Button className="bg-[#03662c] text-white hover:bg-[#03662c]/80 font-semibold" onPress={handleSubmit} isDisabled={isPending}>
+              <Button
+                className="bg-[#03662c] text-white hover:bg-[#03662c]/80 font-semibold"
+                onPress={handleSubmit}
+                isDisabled={isPending}
+              >
                 {isPending ? 'กำลังบันทึก…' : 'บันทึก'}
               </Button>
             </Modal.Footer>

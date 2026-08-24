@@ -1,5 +1,5 @@
-import type { Farm } from "@features/farms";
-import * as turf from "@turf/turf";
+import type { Farm } from '@features/farms';
+import * as turf from '@turf/turf';
 
 export const landToLatLng = (lat: number[], lon: number[]) => {
   const latLng = Array.from({ length: lat.length }, (_, i) => [lat[i], lon[i]]);
@@ -16,7 +16,8 @@ export const getCentroid = (farm: Farm) => {
       return turf.polygon([ring]);
     });
   if (polygons.length > 0) {
-    const [lng, lat] = turf.centroid(turf.featureCollection(polygons)).geometry.coordinates;
+    const [lng, lat] = turf.centroid(turf.featureCollection(polygons)).geometry
+      .coordinates;
     return { lat, lng };
   }
 

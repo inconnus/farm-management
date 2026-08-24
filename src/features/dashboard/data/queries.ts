@@ -34,15 +34,29 @@ export const iotDeviceQueries = {
 };
 
 export const cameraQueries = {
+  raw: () =>
+    queryOptions({
+      queryKey: ['kasetkorn-cameras-raw'] as const,
+      queryFn: fetchAllCameras,
+    }),
   all: () =>
     queryOptions({
       queryKey: ['kasetkorn-cameras'] as const,
       queryFn: async () => {
-        const [accessToken, items] = await Promise.all([
-          fetchCameraToken(),
-          fetchAllCameras(),
-        ]);
-        return items.map((cam) => kasetkornCameraToCameraData(cam, accessToken));
+        // GetToken is only for live video — don't drop markers if it 401s.
+        const items = await fetchAllCameras();
+        let accessToken: string | undefined;
+        try {
+          accessToken = await fetchCameraToken();
+        } catch (error) {
+          console.warn(
+            '[cameras] GetToken failed; rendering markers without live stream',
+            error,
+          );
+        }
+        return items.map((cam) =>
+          kasetkornCameraToCameraData(cam, accessToken),
+        );
       },
     }),
 };

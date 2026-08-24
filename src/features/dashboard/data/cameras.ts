@@ -3,7 +3,7 @@ import type { KasetkornCamera } from './api';
 
 export function kasetkornCameraToCameraData(
   cam: KasetkornCamera,
-  accessToken: string,
+  accessToken?: string,
 ): CameraData {
   return {
     id: cam._id,
@@ -13,14 +13,18 @@ export function kasetkornCameraToCameraData(
     province: cam.province,
     amphur: cam.amphur,
     tambon: cam.tambon,
-    mode: 'hik',
-    hik: {
-      accessToken,
-      deviceSerial: cam.deviceSerial,
-      code: cam.validateCode,
-      channelNo: 1,
-      quality: 1,
-      method: 2,
-    },
+    ...(accessToken
+      ? {
+          mode: 'hik' as const,
+          hik: {
+            accessToken,
+            deviceSerial: cam.deviceSerial,
+            code: cam.validateCode,
+            channelNo: 1,
+            quality: 1,
+            method: 2,
+          },
+        }
+      : {}),
   };
 }

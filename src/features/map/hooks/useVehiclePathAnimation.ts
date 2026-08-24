@@ -2,9 +2,9 @@ import {
   getCompletedPathCoords,
   positionAlongPath,
 } from '@features/vehicles/data/mockVehicles';
+import type { VehicleData } from '@features/vehicles/types';
 import { computeJobProgress } from '@features/vehicles/utils/pathMath';
 import { getVehicleTypeMeta } from '@features/vehicles/utils/vehicleDisplay';
-import type { VehicleData } from '@features/vehicles/types';
 import { useEffect, useRef } from 'react';
 
 /**

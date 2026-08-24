@@ -13,10 +13,11 @@ import { devicePopupAtom } from '../store/devicePopupAtom';
 import { CameraPopup } from './CameraPopup';
 import { MapPopup } from './index';
 import { LightPopup } from './LightPopup';
-import { MapStyleSwitcher } from './MapStyleSwitcher';
 import { MapPathOverlay } from './MapPathOverlay';
-import { VehicleMapMarkerOverlay } from './VehicleMapMarkerOverlay';
+import { MapStyleSwitcher } from './MapStyleSwitcher';
+import { SensorPopup } from './SensorPopup';
 import { SolarCellPopup } from './SolarCellPopup';
+import { VehicleMapMarkerOverlay } from './VehicleMapMarkerOverlay';
 import { VehiclePopup } from './VehiclePopup';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
@@ -90,9 +91,9 @@ const MapView = () => {
         if (feature) {
           const landId = String(
             feature.properties?.landId ??
-            feature.properties?.user_landId ??
-            feature.id ??
-            '',
+              feature.properties?.user_landId ??
+              feature.id ??
+              '',
           );
           if (landId) setClickedPolygonLandId(landId);
         } else {
@@ -201,6 +202,9 @@ const MapView = () => {
                 })
               }
             />
+          )}
+          {devicePopup.type === 'sensor' && devicePopup.sensor && (
+            <SensorPopup sensor={devicePopup.sensor} />
           )}
           {devicePopup.type === 'vehicle' && devicePopup.vehicle && (
             <VehiclePopup vehicle={devicePopup.vehicle} />

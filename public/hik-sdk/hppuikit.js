@@ -17,12 +17,11 @@ var EZVIZ_ENV = {
 
 var API_LIVE_ADDRESS =
   'https://isgp.hik-partner.com/api/hpcgw/v1/device/live/address/get';
-var API_TALK_URL =
-  'https://isgp.hik-partner.com/api/lapp/live/talk/url';
+var API_TALK_URL = 'https://isgp.hik-partner.com/api/lapp/live/talk/url';
 
 function swallowPluginResult(result) {
   if (result && typeof result.then === 'function') {
-    return result.catch(function (err) {
+    return result.catch((err) => {
       if (err !== undefined) {
         console.warn('[HPPUIKit] plugin async:', err);
       }
@@ -55,20 +54,17 @@ function teardownPluginAsync() {
     return Promise.resolve();
   }
   return callPlugin(plugin, 'JS_Stop', [wind])
-    .then(function () {
-      return callPlugin(plugin, 'JS_DestroyWorker', []);
-    })
-    .then(function () {
-      return new Promise(function (resolve) {
-        setTimeout(resolve, TEARDOWN_GAP_MS);
-      });
-    });
+    .then(() => callPlugin(plugin, 'JS_DestroyWorker', []))
+    .then(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, TEARDOWN_GAP_MS);
+        }),
+    );
 }
 
 function scheduleTeardown() {
-  pluginLifecycle = pluginLifecycle
-    .then(teardownPluginAsync)
-    .catch(function () {});
+  pluginLifecycle = pluginLifecycle.then(teardownPluginAsync).catch(() => {});
   return pluginLifecycle;
 }
 
@@ -105,7 +101,7 @@ function invokeJSPlay(playArgs, p) {
     }
     return null;
   }
-  return callPlugin(oPlugin, 'JS_Play', playArgs).catch(function (e) {
+  return callPlugin(oPlugin, 'JS_Play', playArgs).catch((e) => {
     if (p) {
       notifyPlayError(p, e && e.message ? e.message : 'JS_Play failed');
     }
@@ -138,10 +134,10 @@ function startPlayFromResponse(p, res, extraPlayArgs) {
   var pending = invokeJSPlay(args, p);
   if (pending && typeof pending.then === 'function') {
     pending
-      .then(function () {
+      .then(() => {
         markStreamStarted(p);
       })
-      .catch(function () {
+      .catch(() => {
         markStreamStarted(p);
       });
   } else {
@@ -160,7 +156,7 @@ function startPlayFromResponse(p, res, extraPlayArgs) {
  * @param {Function} [params.performanceLack]
  */
 function initPlugin(params) {
-  return scheduleTeardown().then(function () {
+  return scheduleTeardown().then(() => {
     oPlugin = new JSPlugin({
       szId: params.wndId,
       iWidth: params.width || 600,
@@ -176,27 +172,27 @@ function initPlugin(params) {
     });
 
     oPlugin.JS_SetWindowControlCallback({
-      windowEventSelect: function (windowIndex) {
+      windowEventSelect: (windowIndex) => {
         iWind = windowIndex;
       },
 
-      pluginErrorHandler: function (iWndIndex, iErrorCode, oError) {
+      pluginErrorHandler: (iWndIndex, iErrorCode, oError) => {
         if (params.pluginErrorHandler) {
           params.pluginErrorHandler(iWndIndex, iErrorCode, oError);
         }
       },
 
-      windowEventOver: function () {},
-      windowEventOut: function () {},
-      windowEventUp: function () {},
-      windowFullCcreenChange: function () {}, // ชื่อเดิมจาก SDK (สะกดผิด FullCcreen)
-      firstFrameDisplay: function () {
+      windowEventOver: () => {},
+      windowEventOut: () => {},
+      windowEventUp: () => {},
+      windowFullCcreenChange: () => {}, // ชื่อเดิมจาก SDK (สะกดผิด FullCcreen)
+      firstFrameDisplay: () => {
         if (params.onFirstFrame) {
           params.onFirstFrame();
         }
       },
 
-      performanceLack: function () {
+      performanceLack: () => {
         if (params.performanceLack) {
           params.performanceLack();
         }
@@ -221,9 +217,7 @@ function initPlugin(params) {
  * @property {Function} [performanceLack]
  */
 
-var HPPUIKitPlayer = (function () {
-  'use strict';
-
+var HPPUIKitPlayer = (() => {
   function HPPUIKitPlayer(params) {
     this.params = params;
     this._session = ++activeSession;
@@ -239,7 +233,7 @@ var HPPUIKitPlayer = (function () {
     var p = this.params;
     var session = this._session;
 
-    this._ready.then(function () {
+    this._ready.then(() => {
       if (session !== activeSession || !oPlugin) {
         return;
       }
@@ -257,13 +251,13 @@ var HPPUIKitPlayer = (function () {
           code: p.code || '',
           quality: p.quality || 1,
         }),
-        success: function (res) {
+        success: (res) => {
           if (session !== activeSession || !oPlugin) {
             return;
           }
           startPlayFromResponse(p, res);
         },
-        error: function (xhr) {
+        error: (xhr) => {
           if (session !== activeSession) {
             return;
           }
@@ -289,12 +283,12 @@ var HPPUIKitPlayer = (function () {
     startMode,
     endMode,
     startTime,
-    stopTime
+    stopTime,
   ) {
     var p = this.params;
     var session = this._session;
 
-    this._ready.then(function () {
+    this._ready.then(() => {
       if (session !== activeSession || !oPlugin) {
         return;
       }
@@ -315,13 +309,13 @@ var HPPUIKitPlayer = (function () {
           stopTime: stopTime || '',
           type: p.method,
         }),
-        success: function (res) {
+        success: (res) => {
           if (session !== activeSession || !oPlugin) {
             return;
           }
           startPlayFromResponse(p, res, [startMode, endMode]);
         },
-        error: function (xhr) {
+        error: (xhr) => {
           if (session !== activeSession) {
             return;
           }
@@ -351,7 +345,7 @@ var HPPUIKitPlayer = (function () {
         deviceSerial: p.deviceSerial,
         channelNo: p.channelNo || 1,
       }),
-      success: function (res) {
+      success: (res) => {
         if (!res.data) {
           return;
         }
@@ -367,63 +361,47 @@ var HPPUIKitPlayer = (function () {
           },
           iWind,
           typeof szStartDate !== 'undefined' ? szStartDate : undefined,
-          typeof szEndDate !== 'undefined' ? szEndDate : undefined
+          typeof szEndDate !== 'undefined' ? szEndDate : undefined,
         );
       },
-      error: function (xhr, status, err) {
+      error: (xhr, status, err) => {
         console.log(xhr, status, err);
       },
     });
   };
 
-  HPPUIKitPlayer.prototype.stop = function () {
+  HPPUIKitPlayer.prototype.stop = () => {
     if (!oPlugin) {
       return Promise.resolve();
     }
     return callPlugin(oPlugin, 'JS_Stop', [iWind]);
   };
 
-  HPPUIKitPlayer.prototype.openSound = function () {
-    return oPlugin.JS_OpenSound(iWind);
-  };
+  HPPUIKitPlayer.prototype.openSound = () => oPlugin.JS_OpenSound(iWind);
 
-  HPPUIKitPlayer.prototype.closeSound = function () {
-    return oPlugin.JS_CloseSound(iWind);
-  };
+  HPPUIKitPlayer.prototype.closeSound = () => oPlugin.JS_CloseSound(iWind);
 
-  HPPUIKitPlayer.prototype.getVolume = function () {
-    return oPlugin.JS_GetVolume(iWind);
-  };
+  HPPUIKitPlayer.prototype.getVolume = () => oPlugin.JS_GetVolume(iWind);
 
-  HPPUIKitPlayer.prototype.setVolume = function (volume) {
-    return oPlugin.JS_SetVolume(iWind, volume);
-  };
+  HPPUIKitPlayer.prototype.setVolume = (volume) =>
+    oPlugin.JS_SetVolume(iWind, volume);
 
-  HPPUIKitPlayer.prototype.resize = function (width, height) {
-    return oPlugin.JS_Resize(width, height);
-  };
+  HPPUIKitPlayer.prototype.resize = (width, height) =>
+    oPlugin.JS_Resize(width, height);
 
-  HPPUIKitPlayer.prototype.fullScreen = function () {
-    return oPlugin.JS_FullScreenDisplay(true);
-  };
+  HPPUIKitPlayer.prototype.fullScreen = () =>
+    oPlugin.JS_FullScreenDisplay(true);
 
-  HPPUIKitPlayer.prototype.capturePicture = function (fileName) {
-    return oPlugin.JS_CapturePicture(iWind, 'img', fileName);
-  };
+  HPPUIKitPlayer.prototype.capturePicture = (fileName) =>
+    oPlugin.JS_CapturePicture(iWind, 'img', fileName);
 
-  HPPUIKitPlayer.prototype.fast = function () {
-    return oPlugin.JS_Fast(iWind);
-  };
+  HPPUIKitPlayer.prototype.fast = () => oPlugin.JS_Fast(iWind);
 
-  HPPUIKitPlayer.prototype.slow = function () {
-    return oPlugin.JS_Slow(iWind);
-  };
+  HPPUIKitPlayer.prototype.slow = () => oPlugin.JS_Slow(iWind);
 
-  HPPUIKitPlayer.prototype.stopTalk = function () {
-    return oPlugin.JS_StopTalk();
-  };
+  HPPUIKitPlayer.prototype.stopTalk = () => oPlugin.JS_StopTalk();
 
-  HPPUIKitPlayer.prototype.destroy = function () {
+  HPPUIKitPlayer.prototype.destroy = () => {
     activeSession += 1;
     return scheduleTeardown();
   };

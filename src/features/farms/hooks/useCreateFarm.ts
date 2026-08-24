@@ -12,7 +12,14 @@ export function useCreateFarm() {
   const orgId = organizations.find((o) => o.slug === orgSlug)?.id ?? null;
 
   const mutation = useMutation({
-    mutationFn: (input: { name: string; lat: number; lng: number; district?: string; province?: string; country?: string }) => {
+    mutationFn: (input: {
+      name: string;
+      lat: number;
+      lng: number;
+      district?: string;
+      province?: string;
+      country?: string;
+    }) => {
       if (!orgId) throw new Error('ไม่พบ organization');
       return createFarm({ ...input, organizationId: orgId });
     },

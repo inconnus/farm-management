@@ -154,7 +154,9 @@ export async function updateTask(input: UpdateTaskInput) {
     .from('tasks')
     .update({
       ...(input.title !== undefined && { title: input.title }),
-      ...(input.description !== undefined && { description: input.description }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
       ...(input.dueDate !== undefined && { due_date: input.dueDate }),
       ...(input.assignedTo !== undefined && { assigned_to: input.assignedTo }),
     })
@@ -164,10 +166,7 @@ export async function updateTask(input: UpdateTaskInput) {
 }
 
 export async function deleteTask(taskId: string) {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
 
   if (error) throw error;
 }

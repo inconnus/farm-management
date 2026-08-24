@@ -23,18 +23,22 @@ function threadPrintErr() {
 }
 function threadAlert() {
   var text = Array.prototype.slice.call(arguments).join(' ');
-  postMessage({cmd: 'alert', text: text, threadId: Module['_pthread_self']()});
+  postMessage({
+    cmd: 'alert',
+    text: text,
+    threadId: Module['_pthread_self'](),
+  });
 }
 // We don't need out() for now, but may need to add it if we want to use it
 // here. Or, if this code all moves into the main JS, that problem will go
 // away. (For now, adding it here increases code size for no benefit.)
-var out = function() {
+var out = () => {
   throw 'out() is not defined in worker.js.';
-}
+};
 var err = threadPrintErr;
 this.alert = threadAlert;
 
-Module['instantiateWasm'] = function(info, receiveInstance) {
+Module['instantiateWasm'] = (info, receiveInstance) => {
   // Instantiate from the module posted from the main thread.
   // We can just use sync instantiation in the worker.
   var instance = new WebAssembly.Instance(Module['wasmModule'], info);
@@ -47,12 +51,12 @@ Module['instantiateWasm'] = function(info, receiveInstance) {
   return instance.exports;
 };
 
-function moduleLoaded() {
-}
+function moduleLoaded() {}
 
-this.onmessage = function(e) {
+this.onmessage = (e) => {
   try {
-    if (e.data.cmd === 'load') { // Preload command that is called once per worker to parse and load the Emscripten code.
+    if (e.data.cmd === 'load') {
+      // Preload command that is called once per worker to parse and load the Emscripten code.
 
       // Module and memory were sent from main thread
       Module['wasmModule'] = e.data.wasmModule;
@@ -70,11 +74,10 @@ this.onmessage = function(e) {
         importScripts(objectUrl);
         URL.revokeObjectURL(objectUrl);
       }
-      JSAudioInterComModule(Module).then(function (instance) {
+      JSAudioInterComModule(Module).then((instance) => {
         Module = instance;
         moduleLoaded();
       });
-
     } else if (e.data.cmd === 'objectTransfer') {
       Module['PThread'].receiveObjectTransfer(e.data);
     } else if (e.data.cmd === 'run') {
@@ -91,7 +94,11 @@ this.onmessage = function(e) {
       Module['__performance_now_clock_drift'] = performance.now() - e.data.time;
 
       // Pass the thread address inside the asm.js scope to store it for fast access that avoids the need for a FFI out.
-      Module['__emscripten_thread_init'](e.data.threadInfoStruct, /*isMainBrowserThread=*/0, /*isMainRuntimeThread=*/0);
+      Module['__emscripten_thread_init'](
+        e.data.threadInfoStruct,
+        /*isMainBrowserThread=*/ 0,
+        /*isMainRuntimeThread=*/ 0,
+      );
 
       // Establish the stack frame for this thread in global scope
       // The stack grows downwards
@@ -121,7 +128,10 @@ this.onmessage = function(e) {
         // enable that to work. If you find the following line to crash, either change the signature
         // to "proper" void *ThreadMain(void *arg) form, or try linking with the Emscripten linker
         // flag -s EMULATE_FUNCTION_POINTER_CASTS=1 to add in emulation for this x86 ABI extension.
-        var result = Module['invokeEntryPoint'](e.data.start_routine, e.data.arg);
+        var result = Module['invokeEntryPoint'](
+          e.data.start_routine,
+          e.data.arg,
+        );
 
         Module['checkStackCookie']();
         if (Module['keepRuntimeAlive']()) {
@@ -129,7 +139,7 @@ this.onmessage = function(e) {
         } else {
           Module['PThread'].threadExit(result);
         }
-      } catch(ex) {
+      } catch (ex) {
         if (ex === 'Canceled!') {
           Module['PThread'].threadCancel();
         } else if (ex != 'unwind') {
@@ -137,44 +147,56 @@ this.onmessage = function(e) {
           // clear to me how this check could ever fail.  In order to get into
           // this try/catch block at all we have already called bunch of
           // functions on `Module`.. why is this one special?
-          if (typeof(Module['_emscripten_futex_wake']) !== "function") {
-            err("Thread Initialisation failed.");
+          if (typeof Module['_emscripten_futex_wake'] !== 'function') {
+            err('Thread Initialisation failed.');
             throw ex;
           }
           // ExitStatus not present in MINIMAL_RUNTIME
           if (ex instanceof Module['ExitStatus']) {
             if (Module['keepRuntimeAlive']()) {
-              err('Pthread 0x' + Module['_pthread_self']().toString(16) + ' called exit(), staying alive due to noExitRuntime.');
+              err(
+                'Pthread 0x' +
+                  Module['_pthread_self']().toString(16) +
+                  ' called exit(), staying alive due to noExitRuntime.',
+              );
             } else {
-              err('Pthread 0x' + Module['_pthread_self']().toString(16) + ' called exit(), calling threadExit.');
+              err(
+                'Pthread 0x' +
+                  Module['_pthread_self']().toString(16) +
+                  ' called exit(), calling threadExit.',
+              );
               Module['PThread'].threadExit(ex.status);
             }
-          }
-          else
-          {
+          } else {
             Module['PThread'].threadExit(-2);
             throw ex;
           }
         } else {
           // else e == 'unwind', and we should fall through here and keep the pthread alive for asynchronous events.
-          err('Pthread 0x' + Module['_pthread_self']().toString(16) + ' completed its pthread main entry point with an unwind, keeping the pthread worker alive for asynchronous operation.');
+          err(
+            'Pthread 0x' +
+              Module['_pthread_self']().toString(16) +
+              ' completed its pthread main entry point with an unwind, keeping the pthread worker alive for asynchronous operation.',
+          );
         }
       }
-    } else if (e.data.cmd === 'cancel') { // Main thread is asking for a pthread_cancel() on this thread.
+    } else if (e.data.cmd === 'cancel') {
+      // Main thread is asking for a pthread_cancel() on this thread.
       if (Module['_pthread_self']()) {
         Module['PThread'].threadCancel();
       }
     } else if (e.data.target === 'setimmediate') {
       // no-op
     } else if (e.data.cmd === 'processThreadQueue') {
-      if (Module['_pthread_self']()) { // If this thread is actually running?
+      if (Module['_pthread_self']()) {
+        // If this thread is actually running?
         Module['_emscripten_current_thread_process_queued_calls']();
       }
     } else {
       err('worker.js received unknown command ' + e.data.cmd);
       err(e.data);
     }
-  } catch(ex) {
+  } catch (ex) {
     err('worker.js onmessage() captured an uncaught exception: ' + ex);
     if (ex && ex.stack) err(ex.stack);
     throw ex;
@@ -182,12 +204,16 @@ this.onmessage = function(e) {
 };
 
 // Node.js support
-if (typeof process === 'object' && typeof process.versions === 'object' && typeof process.versions.node === 'string') {
+if (
+  typeof process === 'object' &&
+  typeof process.versions === 'object' &&
+  typeof process.versions.node === 'string'
+) {
   // Create as web-worker-like an environment as we can.
   self = {
     location: {
-      href: __filename
-    }
+      href: __filename,
+    },
   };
 
   var onmessage = this.onmessage;
@@ -198,15 +224,13 @@ if (typeof process === 'object' && typeof process.versions === 'object' && typeo
 
   var parentPort = nodeWorkerThreads.parentPort;
 
-  parentPort.on('message', function(data) {
+  parentPort.on('message', (data) => {
     onmessage({ data: data });
   });
 
   var nodeFS = require('fs');
 
-  var nodeRead = function(filename) {
-    return nodeFS.readFileSync(filename, 'utf8');
-  };
+  var nodeRead = (filename) => nodeFS.readFileSync(filename, 'utf8');
 
   function globalEval(x) {
     global.require = require;
@@ -214,21 +238,17 @@ if (typeof process === 'object' && typeof process.versions === 'object' && typeo
     eval.call(null, x);
   }
 
-  importScripts = function(f) {
+  importScripts = (f) => {
     globalEval(nodeRead(f));
   };
 
-  postMessage = function(msg) {
+  postMessage = (msg) => {
     parentPort.postMessage(msg);
   };
 
   if (typeof performance === 'undefined') {
     performance = {
-      now: function() {
-        return Date.now();
-      }
+      now: () => Date.now(),
     };
   }
 }
-
-

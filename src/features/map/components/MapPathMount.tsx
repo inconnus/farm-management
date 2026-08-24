@@ -1,9 +1,9 @@
 import { mapInstanceAtom } from '@store/mapStore';
+import type { Feature, LineString } from 'geojson';
 import { useAtomValue } from 'jotai';
-import mapboxgl from 'mapbox-gl';
+import type mapboxgl from 'mapbox-gl';
 import { useEffect, useMemo } from 'react';
 import { movePathLayersToTop } from '../layerOrder';
-import type { Feature, LineString } from 'geojson';
 
 type MapPathMountProps = {
   id: string;

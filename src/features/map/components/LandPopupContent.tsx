@@ -453,7 +453,10 @@ type LandPopupContentProps = {
   mode?: 'popup' | 'sidebar';
 };
 
-export const LandPopupContent = ({ land, mode = 'popup' }: LandPopupContentProps) => {
+export const LandPopupContent = ({
+  land,
+  mode = 'popup',
+}: LandPopupContentProps) => {
   const isSidebar = mode === 'sidebar';
   const landId = String(land.id);
   const farmId = land.farmId;
@@ -579,84 +582,82 @@ export const LandPopupContent = ({ land, mode = 'popup' }: LandPopupContentProps
         </div>
       )}
 
-        <Tabs
-          selectedKey={taskTab}
-          onSelectionChange={onTabsSelectionChange}
-          className="flex min-h-0 flex-1 flex-col m-0 gap-0  "
-        >
-          <Tabs.ListContainer className="shrink-0">
-            <Tabs.List
-              aria-label="สถานะงาน"
-              className="grid w-full grid-cols-3 gap-0.5 rounded-2xl bg-gray-100/90 "
+      <Tabs
+        selectedKey={taskTab}
+        onSelectionChange={onTabsSelectionChange}
+        className="flex min-h-0 flex-1 flex-col m-0 gap-0  "
+      >
+        <Tabs.ListContainer className="shrink-0">
+          <Tabs.List
+            aria-label="สถานะงาน"
+            className="grid w-full grid-cols-3 gap-0.5 rounded-2xl bg-gray-100/90 "
+          >
+            <Tabs.Tab
+              id={TAB_PENDING}
+              className="min-h-[2.75rem]  rounded-3xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-sky-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
             >
-              <Tabs.Tab
-                id={TAB_PENDING}
-                className="min-h-[2.75rem]  rounded-3xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-sky-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
-              >
-                <Row className="w-full items-center gap-0.5 justify-center">
-                  <span className="text-center leading-tight">รอยืนยัน</span>
-                  <Chip
-                    size="sm"
-                    className="h-5 min-w-5 border-none bg-sky-200/80 px-1 text-[10px] text-sky-950"
-                  >
-                    <Chip.Label>{pending.length}</Chip.Label>
-                  </Chip>
-                </Row>
-                <Tabs.Indicator className="hidden" />
-              </Tabs.Tab>
-              <Tabs.Tab
-                id={TAB_IN_PROGRESS}
-                className="min-h-[2.75rem] rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-amber-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
-              >
-                <Row className="w-full items-center gap-0.5 justify-center">
-                  <span className="text-center leading-tight">
-                    กำลังดำเนินการ
-                  </span>
-                  <Chip
-                    size="sm"
-                    className="h-5 min-w-5 border-none bg-amber-200/80 px-1 text-[10px] text-amber-950"
-                  >
-                    <Chip.Label>{inProgress.length}</Chip.Label>
-                  </Chip>
-                </Row>
-                <Tabs.Indicator className="hidden" />
-              </Tabs.Tab>
-              <Tabs.Tab
-                id={TAB_DONE}
-                className="min-h-[2.75rem] rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-emerald-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
-              >
-                <Row className="w-full items-center gap-0.5 justify-center">
-                  <span className="text-center leading-tight">สำเร็จ</span>
-                  <Chip
-                    size="sm"
-                    className="h-5 min-w-5 border-none bg-emerald-200/80 px-1 text-[10px] text-emerald-950"
-                  >
-                    <Chip.Label>{completed.length}</Chip.Label>
-                  </Chip>
-                </Row>
-                <Tabs.Indicator className="hidden" />
-              </Tabs.Tab>
-            </Tabs.List>
-          </Tabs.ListContainer>
+              <Row className="w-full items-center gap-0.5 justify-center">
+                <span className="text-center leading-tight">รอยืนยัน</span>
+                <Chip
+                  size="sm"
+                  className="h-5 min-w-5 border-none bg-sky-200/80 px-1 text-[10px] text-sky-950"
+                >
+                  <Chip.Label>{pending.length}</Chip.Label>
+                </Chip>
+              </Row>
+              <Tabs.Indicator className="hidden" />
+            </Tabs.Tab>
+            <Tabs.Tab
+              id={TAB_IN_PROGRESS}
+              className="min-h-[2.75rem] rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-amber-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
+            >
+              <Row className="w-full items-center gap-0.5 justify-center">
+                <span className="text-center leading-tight">กำลังดำเนินการ</span>
+                <Chip
+                  size="sm"
+                  className="h-5 min-w-5 border-none bg-amber-200/80 px-1 text-[10px] text-amber-950"
+                >
+                  <Chip.Label>{inProgress.length}</Chip.Label>
+                </Chip>
+              </Row>
+              <Tabs.Indicator className="hidden" />
+            </Tabs.Tab>
+            <Tabs.Tab
+              id={TAB_DONE}
+              className="min-h-[2.75rem] rounded-xl px-1 py-1.5 text-[10px] font-semibold leading-tight text-gray-600 data-[selected=true]:bg-white data-[selected=true]:text-emerald-900 data-[selected=true]:shadow-sm sm:px-1.5 sm:text-[11px]"
+            >
+              <Row className="w-full items-center gap-0.5 justify-center">
+                <span className="text-center leading-tight">สำเร็จ</span>
+                <Chip
+                  size="sm"
+                  className="h-5 min-w-5 border-none bg-emerald-200/80 px-1 text-[10px] text-emerald-950"
+                >
+                  <Chip.Label>{completed.length}</Chip.Label>
+                </Chip>
+              </Row>
+              <Tabs.Indicator className="hidden" />
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
 
-          {tasksLoading ? (
-            <Column className="flex-1 items-center justify-center py-8">
-              <Label className="text-sm text-gray-400">กำลังโหลดงาน…</Label>
-            </Column>
-          ) : (
-            <>
-              <Tabs.Panel
-                id={TAB_PENDING}
-                className="flex min-h-0 flex-1  px-3 flex-col  overflow-hidden outline-none data-[focus-visible]:outline-none"
-              >
-                <Column className="min-h-0 flex-1 overflow-y-auto overscroll-contain  [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
-                  {tasks.length === 0 ? (
-                    <Label className="py-8 text-center text-sm text-gray-400">
-                      ไม่มีงาน
-                    </Label>
-                  ) : (
-                    <Column className="bg-white rounded-2xl overflow-hidden">
-                      {/* <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
+        {tasksLoading ? (
+          <Column className="flex-1 items-center justify-center py-8">
+            <Label className="text-sm text-gray-400">กำลังโหลดงาน…</Label>
+          </Column>
+        ) : (
+          <>
+            <Tabs.Panel
+              id={TAB_PENDING}
+              className="flex min-h-0 flex-1  px-3 flex-col  overflow-hidden outline-none data-[focus-visible]:outline-none"
+            >
+              <Column className="min-h-0 flex-1 overflow-y-auto overscroll-contain  [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
+                {tasks.length === 0 ? (
+                  <Label className="py-8 text-center text-sm text-gray-400">
+                    ไม่มีงาน
+                  </Label>
+                ) : (
+                  <Column className="bg-white rounded-2xl overflow-hidden">
+                    {/* <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
                         <SearchIcon size={14} className="text-gray-400 shrink-0" />
                         <input
                           className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
@@ -664,117 +665,117 @@ export const LandPopupContent = ({ land, mode = 'popup' }: LandPopupContentProps
                           value={''}
                         />
                       </Row> */}
-                      {tasks.map((task) => (
-                        <>
-                          <Row
-                            className={`items-start gap-2 cursor-pointer hover:bg-black/5 transition-colors p-3  py-3  `}
-                          >
-                            <Column className="min-w-0 flex-1 gap-1 ">
-                              <Row className=" items-center justify-between gap-2">
-                                <span className="text-sm font-semibold text-gray-800 leading-snug">
-                                  {task.title}
+                    {tasks.map((task) => (
+                      <>
+                        <Row
+                          className={`items-start gap-2 cursor-pointer hover:bg-black/5 transition-colors p-3  py-3  `}
+                        >
+                          <Column className="min-w-0 flex-1 gap-1 ">
+                            <Row className=" items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-gray-800 leading-snug">
+                                {task.title}
+                              </span>
+                            </Row>
+                            <span className="text-[13px] text-gray-500">
+                              {task.description}
+                            </span>
+                            <Row className=" items-center gap-1 justify-between">
+                              <Row className=" items-center gap-1">
+                                <Calendar
+                                  size={14}
+                                  className="shrink-0 text-gray-500"
+                                />
+                                <span className="text-xs text-gray-500">
+                                  {task.dueLabel}
                                 </span>
                               </Row>
-                              <span className="text-[13px] text-gray-500">
-                                {task.description}
-                              </span>
-                              <Row className=" items-center gap-1 justify-between">
-                                <Row className=" items-center gap-1">
-                                  <Calendar
-                                    size={14}
-                                    className="shrink-0 text-gray-500"
-                                  />
-                                  <span className="text-xs text-gray-500">
-                                    {task.dueLabel}
-                                  </span>
-                                </Row>
-                                <img
-                                  src="https://kkndpqqmsswhgnupsznq.supabase.co/storage/v1/object/public/Public/460039832_1939010103263800_8042369095264618016_n.webp"
-                                  alt="calendar"
-                                  className="w-4 h-4 rounded-full object-cover"
-                                />
-                              </Row>
-                            </Column>
-                            <Button isIconOnly variant="ghost">
-                              <EllipsisVerticalIcon className="size-4 text-gray-500" />
-                            </Button>
-                          </Row>
-                          <Separator className="my-0" />
-                        </>
-                      ))}
-                    </Column>
-                  )}
-                </Column>
-              </Tabs.Panel>
-
-              <Tabs.Panel
-                id={TAB_IN_PROGRESS}
-                className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[focus-visible]:outline-none"
-              >
-                <Column className="min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain px-1 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
-                  {tasks.length === 0 ? (
-                    <Label className="py-8 text-center text-sm text-gray-400">
-                      ไม่มีงาน
-                    </Label>
-                  ) : (
-                    <Column className="gap-2">
-                      {tasks.map((task) => (
-                        <Row
-                          className={`items-start gap-2 cursor-pointer hover:bg-gray-100/50 rounded-lg p-2 `}
-                        >
-                          <Column className="min-w-0 flex-1 gap-1">
-                            <span className="text-base font-semibold text-gray-800 leading-snug">
-                              {task.title}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {task.description}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {task.dueLabel}
-                            </span>
+                              <img
+                                src="https://kkndpqqmsswhgnupsznq.supabase.co/storage/v1/object/public/Public/460039832_1939010103263800_8042369095264618016_n.webp"
+                                alt="calendar"
+                                className="w-4 h-4 rounded-full object-cover"
+                              />
+                            </Row>
                           </Column>
+                          <Button isIconOnly variant="ghost">
+                            <EllipsisVerticalIcon className="size-4 text-gray-500" />
+                          </Button>
                         </Row>
-                      ))}
-                    </Column>
-                  )}
-                </Column>
-              </Tabs.Panel>
+                        <Separator className="my-0" />
+                      </>
+                    ))}
+                  </Column>
+                )}
+              </Column>
+            </Tabs.Panel>
 
-              <Tabs.Panel
-                id={TAB_DONE}
-                className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[focus-visible]:outline-none"
-              >
-                <Column className="min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain px-1 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
-                  {tasks.length === 0 ? (
-                    <Label className="py-8 text-center text-sm text-gray-400">
-                      ไม่มีงาน
-                    </Label>
-                  ) : (
-                    <Column className="gap-2">
-                      {tasks.map((task) => (
-                        <Row
-                          className={`items-start gap-2 cursor-pointer hover:bg-gray-100/50 rounded-lg p-2 `}
-                        >
-                          <Column className="min-w-0 flex-1 gap-1">
-                            <span className="text-base font-semibold text-gray-800 leading-snug">
-                              {task.title}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {task.description}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {task.dueLabel}
-                            </span>
-                          </Column>
-                        </Row>
-                      ))}
-                    </Column>
-                  )}
-                </Column>
-              </Tabs.Panel>
-            </>
-          )}
-        </Tabs>
+            <Tabs.Panel
+              id={TAB_IN_PROGRESS}
+              className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[focus-visible]:outline-none"
+            >
+              <Column className="min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain px-1 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
+                {tasks.length === 0 ? (
+                  <Label className="py-8 text-center text-sm text-gray-400">
+                    ไม่มีงาน
+                  </Label>
+                ) : (
+                  <Column className="gap-2">
+                    {tasks.map((task) => (
+                      <Row
+                        className={`items-start gap-2 cursor-pointer hover:bg-gray-100/50 rounded-lg p-2 `}
+                      >
+                        <Column className="min-w-0 flex-1 gap-1">
+                          <span className="text-base font-semibold text-gray-800 leading-snug">
+                            {task.title}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {task.description}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {task.dueLabel}
+                          </span>
+                        </Column>
+                      </Row>
+                    ))}
+                  </Column>
+                )}
+              </Column>
+            </Tabs.Panel>
+
+            <Tabs.Panel
+              id={TAB_DONE}
+              className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[focus-visible]:outline-none"
+            >
+              <Column className="min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain px-1 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300/80">
+                {tasks.length === 0 ? (
+                  <Label className="py-8 text-center text-sm text-gray-400">
+                    ไม่มีงาน
+                  </Label>
+                ) : (
+                  <Column className="gap-2">
+                    {tasks.map((task) => (
+                      <Row
+                        className={`items-start gap-2 cursor-pointer hover:bg-gray-100/50 rounded-lg p-2 `}
+                      >
+                        <Column className="min-w-0 flex-1 gap-1">
+                          <span className="text-base font-semibold text-gray-800 leading-snug">
+                            {task.title}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {task.description}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {task.dueLabel}
+                          </span>
+                        </Column>
+                      </Row>
+                    ))}
+                  </Column>
+                )}
+              </Column>
+            </Tabs.Panel>
+          </>
+        )}
+      </Tabs>
     </>
   );
 

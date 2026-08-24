@@ -143,12 +143,5 @@ export function FarmSatelliteImage({
     onError?.(e);
   };
 
-  return (
-    <img
-      src={src}
-      alt={alt}
-      onError={handleError}
-      {...imgProps}
-    />
-  );
+  return <img src={src} alt={alt} onError={handleError} {...imgProps} />;
 }

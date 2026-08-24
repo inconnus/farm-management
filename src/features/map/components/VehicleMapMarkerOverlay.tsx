@@ -1,15 +1,21 @@
-import { devicePopupAtom, type DevicePopupState } from '@features/map/store/devicePopupAtom';
-import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
+import {
+  type DevicePopupState,
+  devicePopupAtom,
+} from '@features/map/store/devicePopupAtom';
 import { vehicleMapMarkersAtom } from '@features/map/store/vehicleMapLayerAtom';
 import { vehicleMapPathsAtom } from '@features/map/store/vehicleMapPathsAtom';
+import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
 import type { VehicleData } from '@features/vehicles/types';
 import { mapInstanceAtom } from '@store/mapStore';
-import type mapboxgl from 'mapbox-gl';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import type mapboxgl from 'mapbox-gl';
 import type { MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { buildVehicleMapPaths, useVehiclePathAnimation } from '../hooks/useVehiclePathAnimation';
+import {
+  buildVehicleMapPaths,
+  useVehiclePathAnimation,
+} from '../hooks/useVehiclePathAnimation';
 import { VehicleMarkerFace } from './VehicleMarker';
 
 const VEHICLE_POPUP_SYNC_MS = 1000;
@@ -29,7 +35,9 @@ function syncVehiclePopup(
   vehiclePopupLiveLngLatRef.current = [live.lng, live.lat];
 
   const last = lastSyncRef.current;
-  const progressDelta = Math.abs(live.pathProgress - (last?.vehicle.pathProgress ?? -1));
+  const progressDelta = Math.abs(
+    live.pathProgress - (last?.vehicle.pathProgress ?? -1),
+  );
   const statusChanged = live.jobStatus !== last?.vehicle.jobStatus;
   const elapsed = Date.now() - (last?.at ?? 0);
 
@@ -48,7 +56,11 @@ function syncVehiclePopup(
   }
 }
 
-function projectMarkerTransform(map: mapboxgl.Map, lng: number, lat: number): string {
+function projectMarkerTransform(
+  map: mapboxgl.Map,
+  lng: number,
+  lat: number,
+): string {
   const { x, y } = map.project([lng, lat]);
   return `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translate(-50%, -100%)`;
 }
@@ -68,14 +80,20 @@ export function VehicleMapMarkerOverlay() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef(new Map<string, HTMLDivElement>());
   const animatedRef = useRef<VehicleData[]>([]);
-  const lastPopupSyncRef = useRef<{ vehicle: VehicleData; at: number } | null>(null);
+  const lastPopupSyncRef = useRef<{ vehicle: VehicleData; at: number } | null>(
+    null,
+  );
 
   const repaintMarkers = useCallback(() => {
     if (!map) return;
     for (const vehicle of animatedRef.current) {
       const el = markerRefs.current.get(vehicle.id);
       if (el) {
-        el.style.transform = projectMarkerTransform(map, vehicle.lng, vehicle.lat);
+        el.style.transform = projectMarkerTransform(
+          map,
+          vehicle.lng,
+          vehicle.lat,
+        );
       }
     }
   }, [map]);
@@ -91,7 +109,12 @@ export function VehicleMapMarkerOverlay() {
 
       repaintMarkers();
       setVehicleMapPaths(buildVehicleMapPaths(animated));
-      syncVehiclePopup(animated, devicePopupRef.current, setDevicePopup, lastPopupSyncRef);
+      syncVehiclePopup(
+        animated,
+        devicePopupRef.current,
+        setDevicePopup,
+        lastPopupSyncRef,
+      );
     },
     [repaintMarkers, setVehicleMapPaths, setDevicePopup],
   );
@@ -102,7 +125,9 @@ export function VehicleMapMarkerOverlay() {
     if (!map) return;
 
     const container = map.getContainer();
-    const canvasContainer = container.querySelector('.mapboxgl-canvas-container');
+    const canvasContainer = container.querySelector(
+      '.mapboxgl-canvas-container',
+    );
 
     const mount = document.createElement('div');
     mount.className = 'vehicle-marker-overlay';
@@ -151,7 +176,11 @@ export function VehicleMapMarkerOverlay() {
       animatedRef.current.find((v) => v.id === vehicle.id) ?? vehicle;
     vehiclePopupLiveLngLatRef.current = [latest.lng, latest.lat];
     lastPopupSyncRef.current = { vehicle: latest, at: Date.now() };
-    setDevicePopup({ type: 'vehicle', lngLat: [latest.lng, latest.lat], vehicle: latest });
+    setDevicePopup({
+      type: 'vehicle',
+      lngLat: [latest.lng, latest.lat],
+      vehicle: latest,
+    });
   };
 
   return createPortal(

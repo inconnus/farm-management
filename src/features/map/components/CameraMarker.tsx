@@ -25,7 +25,9 @@ export type CameraData = {
   streamUrl?: string;
 };
 
-function readHikParams(config: Record<string, unknown>): HikCameraParams | undefined {
+function readHikParams(
+  config: Record<string, unknown>,
+): HikCameraParams | undefined {
   const accessToken =
     (config.access_token as string) || (config.accessToken as string);
   const deviceSerial =
@@ -47,8 +49,7 @@ function readHikParams(config: Record<string, unknown>): HikCameraParams | undef
 
 export function toCameraData(device: DbDevice): CameraData {
   const config = (device.config ?? {}) as Record<string, unknown>;
-  const mode =
-    config.mode === 'hik' ? ('hik' as const) : undefined;
+  const mode = config.mode === 'hik' ? ('hik' as const) : undefined;
   const hik = mode === 'hik' ? readHikParams(config) : undefined;
 
   return {
@@ -56,6 +57,9 @@ export function toCameraData(device: DbDevice): CameraData {
     name: device.name,
     lat: device.lat,
     lng: device.lng,
+    province: (config.province as string) || undefined,
+    amphur: (config.amphur as string) || undefined,
+    tambon: (config.tambon as string) || undefined,
     mode,
     hik,
     isHikvision: (config.is_hikvision as boolean) || undefined,

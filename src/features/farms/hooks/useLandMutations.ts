@@ -1,11 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { deleteLand, updateLand, type UpdateLandInput } from '../api';
+import { deleteLand, type UpdateLandInput, updateLand } from '../api';
 
 export function useUpdateLand() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ landId, input }: { landId: string; input: UpdateLandInput }) =>
-      updateLand(landId, input),
+    mutationFn: ({
+      landId,
+      input,
+    }: {
+      landId: string;
+      input: UpdateLandInput;
+    }) => updateLand(landId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farms'] });
     },

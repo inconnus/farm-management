@@ -1,6 +1,6 @@
-import type { Location } from 'react-router-dom';
 import type { OrgMemberRole } from '@shared/lib/permissions';
 import { canAccessNavItem } from '@shared/lib/permissions';
+import type { Location } from 'react-router-dom';
 
 /**
  * Path ที่จะไปหลัง login เมื่อ user ถูกส่งมาจาก ProtectedRoute (state.from)

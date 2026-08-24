@@ -4,7 +4,8 @@ import { DroneIcon, TractorIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 export const AUTOMATED_VEHICLE_DEVICE_TYPES = ['tractor', 'drone'] as const;
-export type AutomatedVehicleDeviceType = (typeof AUTOMATED_VEHICLE_DEVICE_TYPES)[number];
+export type AutomatedVehicleDeviceType =
+  (typeof AUTOMATED_VEHICLE_DEVICE_TYPES)[number];
 
 export function isAutomatedVehicleDevice(
   device: Pick<DbDevice, 'device_type'>,
@@ -80,11 +81,17 @@ export function getVehicleTypeMeta(type: VehicleType) {
   return VEHICLE_TYPE_META[type];
 }
 
-export function getDeviceSpeedKmh(device: Pick<DbDevice, 'device_type' | 'config'>): number {
+export function getDeviceSpeedKmh(
+  device: Pick<DbDevice, 'device_type' | 'config'>,
+): number {
   const vehicleType = deviceTypeToVehicleType(device.device_type);
   const fallback = VEHICLE_TYPE_META[vehicleType].defaultSpeedKmh;
 
-  if (device.config !== null && typeof device.config === 'object' && !Array.isArray(device.config)) {
+  if (
+    device.config !== null &&
+    typeof device.config === 'object' &&
+    !Array.isArray(device.config)
+  ) {
     const value = (device.config as Record<string, unknown>).speed_kmh;
     if (typeof value === 'number' && Number.isFinite(value)) return value;
   }
@@ -99,7 +106,12 @@ type VehicleTypeIconProps = {
   style?: CSSProperties;
 };
 
-export function VehicleTypeIcon({ type, size = 20, className, style }: VehicleTypeIconProps) {
+export function VehicleTypeIcon({
+  type,
+  size = 20,
+  className,
+  style,
+}: VehicleTypeIconProps) {
   if (type === 'drone') {
     return <DroneIcon size={size} className={className} style={style} />;
   }
@@ -116,7 +128,9 @@ export function renderDeviceTypeBadge(deviceType: string): ReactNode {
   const type = deviceTypeToVehicleType(deviceType);
   const meta = getVehicleTypeMeta(type);
   return (
-    <span className={`text-[10px] font-medium uppercase tracking-wide ${meta.accent}`}>
+    <span
+      className={`text-[10px] font-medium uppercase tracking-wide ${meta.accent}`}
+    >
       {meta.deviceLabel}
     </span>
   );

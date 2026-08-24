@@ -1,17 +1,22 @@
 import { Column, Row } from '@app/layout';
-import { Fragment, useState } from 'react';
 import { FarmSatelliteImage } from '@features/map/components';
 import { Button, Chip, Label, Separator } from '@heroui/react';
 import { DropdownMenu } from '@shared/ui/DropdownMenu';
 import { MapPinIcon, Pencil, SearchIcon, Trash2 } from 'lucide-react';
-import type { Farm } from '../transforms';
+import { Fragment, useState } from 'react';
 import { useCreateFarm } from '../hooks/useCreateFarm';
 import { useDeleteFarm, useUpdateFarm } from '../hooks/useFarmMutations';
+import type { Farm } from '../transforms';
 import { CreateFarmModal, type FarmInitialValues } from './CreateFarmModal';
 
 const FARM_MENU_ITEMS = [
   { id: 'edit', label: 'แก้ไขฟาร์ม', icon: <Pencil size={13} /> },
-  { id: 'delete', label: 'ลบฟาร์ม', icon: <Trash2 size={13} />, variant: 'danger' as const },
+  {
+    id: 'delete',
+    label: 'ลบฟาร์ม',
+    icon: <Trash2 size={13} />,
+    variant: 'danger' as const,
+  },
 ];
 
 type EditFarmState = FarmInitialValues & { id: string };
@@ -62,9 +67,24 @@ export const FarmListPage = ({
         <Column className="flex-1 overflow-y-auto min-h-0 pr-2 -mr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {isLoading ? (
             <div className="py-8 flex flex-col items-center gap-3">
-              <svg className="h-6 w-6 animate-spin text-green-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="h-6 w-6 animate-spin text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               <Label className="text-gray-400 text-sm">กำลังโหลดฟาร์ม...</Label>
             </div>
@@ -90,12 +110,18 @@ export const FarmListPage = ({
                         className="w-14 h-14 rounded-xl object-cover shrink-0"
                       />
                       <Column className="flex-1 min-w-0 items-start">
-                        <span className="font-medium text-[15px]">{farm.name}</span>
-                        <span className="text-gray-400 text-[12px]">{farm.plotCount} แปลง</span>
+                        <span className="font-medium text-[15px]">
+                          {farm.name}
+                        </span>
+                        <span className="text-gray-400 text-[12px]">
+                          {farm.plotCount} แปลง
+                        </span>
                         <Chip className="mt-0.5">
                           <MapPinIcon size={13} color="#ebebec" fill="red" />
                           <Chip.Label className="text-[11px]">
-                            {[farm.district, farm.province].filter(Boolean).join(' · ') || '—'}
+                            {[farm.district, farm.province]
+                              .filter(Boolean)
+                              .join(' · ') || '—'}
                           </Chip.Label>
                         </Chip>
                       </Column>
@@ -170,7 +196,9 @@ export const FarmListPage = ({
       {/* Edit */}
       <CreateFarmModal
         isOpen={!!editingFarm}
-        onOpenChange={(open) => { if (!open) setEditingFarm(null); }}
+        onOpenChange={(open) => {
+          if (!open) setEditingFarm(null);
+        }}
         initialValues={editingFarm ?? undefined}
         onSubmit={(data) => {
           if (!editingFarm) return;

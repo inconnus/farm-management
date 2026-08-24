@@ -1,10 +1,10 @@
+import { Description, Switch } from '@heroui/react';
 import {
   SENSOR_TIME_OPTIONS,
   type SensorApiSettings,
   sensorApiSettingsAtom,
   setSensorApiSettingsAtom,
 } from '@shared/store/sensorApiStore';
-import { Description, Switch } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { RadioIcon } from 'lucide-react';
@@ -83,7 +83,6 @@ export const SensorApiPanel = ({ isActive }: SensorApiPanelProps) => {
                 </Switch.Control>
                 Mock Sensor
               </Switch.Content>
-            
             </Switch>
           </div>
         </section>

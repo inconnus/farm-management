@@ -15,7 +15,13 @@ export function NavRoleRoute({ navItem, children }: NavRoleRouteProps) {
   const currentOrg = organizations.find((o) => o.slug === orgSlug) ?? null;
 
   if (!canAccessNavItem(currentOrg?.role, navItem)) {
-    return <Navigate to={`/${orgSlug}/dashboard`} state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to={`/${orgSlug}/dashboard`}
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

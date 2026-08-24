@@ -1,6 +1,9 @@
+import {
+  DEFAULT_SIMULATION_SPEED_FACTOR,
+  measurePathLengthKm,
+} from '@features/vehicles/utils/pathMath';
 import { supabase } from '@lib/supabase/client';
 import type { Enums, Json, Tables } from '@lib/supabase/database.types';
-import { DEFAULT_SIMULATION_SPEED_FACTOR, measurePathLengthKm } from '@features/vehicles/utils/pathMath';
 
 export type DbAutomatedJobStatus = Enums<'automated_job_status'>;
 
@@ -64,7 +67,9 @@ export function parseWorkPath(value: Json): [number, number][] {
   return path;
 }
 
-export async function fetchAutomatedJobsByLand(landId: string): Promise<DbAutomatedJob[]> {
+export async function fetchAutomatedJobsByLand(
+  landId: string,
+): Promise<DbAutomatedJob[]> {
   const { data, error } = await supabase
     .from('automated_jobs')
     .select(JOB_SELECT)

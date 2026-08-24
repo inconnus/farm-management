@@ -5,6 +5,9 @@ import { cameraQueries, iotDeviceQueries, landQueries } from '../data/queries';
 
 export const useCamerasQuery = () => useQuery({ ...cameraQueries.all() });
 
+export const useKasetkornCamerasQuery = (enabled = true) =>
+  useQuery({ ...cameraQueries.raw(), enabled });
+
 export const useIOTDevicesQuery = () => {
   const sensorApiSettings = useAtomValue(sensorApiSettingsAtom);
 
@@ -27,13 +30,17 @@ export const useLandsQueries = (appFarmIds: string[]) => {
   });
 };
 
-export const useIOTTelemetryQueries = (appIotIds: string[]) => {
+export const useIOTTelemetryQueries = (
+  appIotIds: string[],
+  enabled = true,
+) => {
   const sensorApiSettings = useAtomValue(sensorApiSettingsAtom);
 
   return useQueries({
     queries: appIotIds.map((appIotId) => ({
       ...iotDeviceQueries.telemetry(appIotId, sensorApiSettings),
-      refetchInterval: 10000,
+      enabled,
+      refetchInterval: enabled ? 30000 : false,
     })),
   });
 };

@@ -17,7 +17,9 @@ export function canAccessNavItem(
   return ROLE_NAV_ACCESS[role as OrgMemberRole].includes(item);
 }
 
-export function canAccessSettings(role: OrgMemberRole | null | undefined): boolean {
+export function canAccessSettings(
+  role: OrgMemberRole | null | undefined,
+): boolean {
   return role === 'owner' || role === 'admin';
 }
 

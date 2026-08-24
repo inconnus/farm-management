@@ -2,11 +2,16 @@ import { isAuthenticatedAtom } from '@features/auth/store';
 import { useRealtimeSubscription } from '@lib/supabase/useRealtimeSubscription';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAtomValue } from 'jotai';
-import { ACTIVE_AUTOMATED_JOB_STATUSES } from '../api';
 import * as automatedJobsApi from '../api';
+import { ACTIVE_AUTOMATED_JOB_STATUSES } from '../api';
 import { automatedJobQueries } from '../queries';
 
-export type { CreateAutomatedJobInput, DbAutomatedJob, DbAutomatedJobStatus, BusyAutomatedDevice } from '../api';
+export type {
+  BusyAutomatedDevice,
+  CreateAutomatedJobInput,
+  DbAutomatedJob,
+  DbAutomatedJobStatus,
+} from '../api';
 export { ACTIVE_AUTOMATED_JOB_STATUSES } from '../api';
 
 export function useLandAutomatedJobsQuery(landId: string) {
@@ -74,7 +79,8 @@ export function useCreateAutomatedJob() {
         queryKey: automatedJobQueries.byLand(variables.landId).queryKey,
       });
       queryClient.invalidateQueries({
-        queryKey: automatedJobQueries.busyDevicesByFarm(variables.farmId).queryKey,
+        queryKey: automatedJobQueries.busyDevicesByFarm(variables.farmId)
+          .queryKey,
       });
     },
   });

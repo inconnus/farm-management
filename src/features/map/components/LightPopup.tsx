@@ -1,6 +1,7 @@
 import { Column, Row } from '@app/layout';
 import { useUpdateDeviceMutation } from '@features/devices/hooks/useUpdateDeviceMutation';
 import { Card } from '@heroui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   LoaderCircleIcon,
   MoonIcon,
@@ -10,7 +11,6 @@ import {
   TimerIcon,
   ZapIcon,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { LightData } from './LightMarker';
 
@@ -51,7 +51,9 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
     setKelvin(light.colorTempK);
   }, [light.id, light.isOn, light.brightness, light.colorTempK]);
 
-  const brightnessDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const brightnessDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const kelvinDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function handleToggle() {
@@ -69,7 +71,8 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
 
   function handleBrightnessChange(val: number) {
     setBrightness(val);
-    if (brightnessDebounceRef.current) clearTimeout(brightnessDebounceRef.current);
+    if (brightnessDebounceRef.current)
+      clearTimeout(brightnessDebounceRef.current);
     brightnessDebounceRef.current = setTimeout(() => {
       onUpdate?.({ brightness: val });
       mutate(
@@ -117,19 +120,36 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
           <Row className="items-center gap-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: isOn ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.06)' }}
+              style={{
+                background: isOn
+                  ? 'rgba(251,191,36,0.2)'
+                  : 'rgba(255,255,255,0.06)',
+              }}
             >
-              <SunIcon size={16} style={{ color: isOn ? '#fbbf24' : '#6b7280' }} />
+              <SunIcon
+                size={16}
+                style={{ color: isOn ? '#fbbf24' : '#6b7280' }}
+              />
             </div>
             <Column className="gap-0">
-              <span className="text-sm font-semibold text-white leading-tight">{light.name}</span>
-              <span className="text-[10px]" style={{ color: isOn ? '#fbbf24' : '#6b7280' }}>
+              <span className="text-sm font-semibold text-white leading-tight">
+                {light.name}
+              </span>
+              <span
+                className="text-[10px]"
+                style={{ color: isOn ? '#fbbf24' : '#6b7280' }}
+              >
                 {isOn ? `${estimatedWatts} W · กำลังทำงาน` : 'ปิดอยู่'}
               </span>
             </Column>
           </Row>
 
-          {isPending && <LoaderCircleIcon size={14} className="text-white/30 animate-spin" />}
+          {isPending && (
+            <LoaderCircleIcon
+              size={14}
+              className="text-white/30 animate-spin"
+            />
+          )}
         </Row>
       </div>
 
@@ -149,9 +169,11 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
               : '0 4px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05)',
           }}
         >
-          {isOn
-            ? <SunIcon size={32} className="text-white drop-shadow-lg" />
-            : <MoonIcon size={28} className="text-gray-500" />}
+          {isOn ? (
+            <SunIcon size={32} className="text-white drop-shadow-lg" />
+          ) : (
+            <MoonIcon size={28} className="text-gray-500" />
+          )}
           {isOn && (
             <span
               className="absolute inset-0 rounded-full animate-ping"
@@ -159,7 +181,10 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
             />
           )}
         </button>
-        <span className="text-xs font-medium" style={{ color: isOn ? '#fbbf24' : '#4b5563' }}>
+        <span
+          className="text-xs font-medium"
+          style={{ color: isOn ? '#fbbf24' : '#4b5563' }}
+        >
           {isOn ? 'แตะเพื่อปิด' : 'แตะเพื่อเปิด'}
         </span>
       </Column>
@@ -177,7 +202,9 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
                 <SunDimIcon size={13} className="text-amber-400/70" />
                 <span className="text-xs text-white/60">ความสว่าง</span>
               </Row>
-              <span className="text-xs font-semibold text-amber-300">{brightness}%</span>
+              <span className="text-xs font-semibold text-amber-300">
+                {brightness}%
+              </span>
             </Row>
             <input
               type="range"
@@ -206,10 +233,15 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
                 <span className="text-xs text-white/60">อุณหภูมิสี</span>
               </Row>
               <Row className="items-center gap-1">
-                <span className="text-xs font-semibold" style={{ color: tempColor }}>
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: tempColor }}
+                >
                   {kelvin.toLocaleString()} K
                 </span>
-                <span className="text-[10px] text-white/30">· {kelvinLabel(kelvin)}</span>
+                <span className="text-[10px] text-white/30">
+                  · {kelvinLabel(kelvin)}
+                </span>
               </Row>
             </Row>
             <input
@@ -239,13 +271,18 @@ export const LightPopup = ({ light, onUpdate }: LightPopupProps) => {
       </div>
 
       {/* ── Footer stats ─────────────────────────────────────────── */}
-      <div className="border-t mx-4 mb-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div
+        className="border-t mx-4 mb-4"
+        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+      >
         <Row className="pt-3 gap-2">
           <Row className="flex-1 items-center gap-1.5 bg-white/5 rounded-xl px-3 py-2">
             <ZapIcon size={12} className="text-amber-400/70" />
             <Column className="gap-0">
               <span className="text-[10px] text-white/40">พลังงาน</span>
-              <span className="text-xs font-semibold text-white/80">{estimatedWatts} W</span>
+              <span className="text-xs font-semibold text-white/80">
+                {estimatedWatts} W
+              </span>
             </Column>
           </Row>
           <Row className="flex-1 items-center gap-1.5 bg-white/5 rounded-xl px-3 py-2">

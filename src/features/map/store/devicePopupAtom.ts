@@ -2,6 +2,7 @@ import type { VehicleData } from '@features/vehicles/types';
 import { atom } from 'jotai';
 import type { CameraData } from '../components/CameraMarker';
 import type { LightData } from '../components/LightMarker';
+import type { SensorData } from '../components/SensorMarker';
 import type { SolarCellData } from '../components/SolarCellMarker';
 
 export type DevicePopupState =
@@ -19,6 +20,11 @@ export type DevicePopupState =
       type: 'light';
       lngLat: [number, number];
       light: LightData;
+    }
+  | {
+      type: 'sensor';
+      lngLat: [number, number];
+      sensor: SensorData;
     }
   | {
       type: 'vehicle';

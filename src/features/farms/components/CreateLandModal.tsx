@@ -1,13 +1,13 @@
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { ColorSwatchPicker, Modal, parseColor } from '@heroui/react';
 import type { Color } from '@heroui/react';
+import { ColorSwatchPicker, Modal, parseColor } from '@heroui/react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { mapInstanceAtom } from '@store/mapStore';
+import { useAtomValue } from 'jotai';
 import { RotateCcw, Sprout } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useAtomValue } from 'jotai';
-import { mapInstanceAtom } from '@store/mapStore';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -84,7 +84,11 @@ const modalDrawStyles = [
     paint: {
       'circle-radius': 5,
       'circle-color': '#fff',
-      'circle-stroke-color': ['coalesce', ['get', 'user_color'], FALLBACK_COLOR],
+      'circle-stroke-color': [
+        'coalesce',
+        ['get', 'user_color'],
+        FALLBACK_COLOR,
+      ],
       'circle-stroke-width': 2,
     },
   },
@@ -92,7 +96,10 @@ const modalDrawStyles = [
     id: 'gl-draw-midpoint',
     type: 'circle' as const,
     filter: ['all', ['==', 'meta', 'midpoint']],
-    paint: { 'circle-radius': 3, 'circle-color': ['coalesce', ['get', 'user_color'], FALLBACK_COLOR] },
+    paint: {
+      'circle-radius': 3,
+      'circle-color': ['coalesce', ['get', 'user_color'], FALLBACK_COLOR],
+    },
   },
 ];
 
@@ -112,7 +119,9 @@ export const CreateLandModal = ({
 
   const [landName, setLandName] = useState('');
   const [cropType, setCropType] = useState('');
-  const [drawnCoords, setDrawnCoords] = useState<[number, number][] | null>(null);
+  const [drawnCoords, setDrawnCoords] = useState<[number, number][] | null>(
+    null,
+  );
   const [isDrawing, setIsDrawing] = useState(true);
   const [color, setColor] = useState<Color>(() => parseColor(LAND_COLORS[0]));
 
@@ -232,7 +241,11 @@ export const CreateLandModal = ({
 
           // Switch to direct_select so vertices are immediately editable
           m.once('moveend', () => {
-            try { draw.changeMode('direct_select', { featureId: fid }); } catch { /* ok */ }
+            try {
+              draw.changeMode('direct_select', { featureId: fid });
+            } catch {
+              /* ok */
+            }
           });
         } else {
           draw.changeMode('draw_polygon');
@@ -249,19 +262,26 @@ export const CreateLandModal = ({
         draw.setFeatureProperty(featureId, 'color', hex);
         const refreshed = draw.get(featureId);
         if (refreshed) draw.add(refreshed);
-        const coords = (feature.geometry as GeoJSON.Polygon).coordinates[0] as [number, number][];
+        const coords = (feature.geometry as GeoJSON.Polygon).coordinates[0] as [
+          number,
+          number,
+        ][];
         setDrawnCoords(coords);
         setIsDrawing(false);
       });
 
       // Capture polygon edits: vertex moves, polygon drags (edit mode)
-      m.on('draw.update', (e: { features: GeoJSON.Feature[]; action: string }) => {
-        const feature = e.features[0];
-        if (!feature) return;
-        const coords = (feature.geometry as GeoJSON.Polygon).coordinates[0] as [number, number][];
-        drawnFeatureIdRef.current = String(feature.id);
-        setDrawnCoords(coords);
-      });
+      m.on(
+        'draw.update',
+        (e: { features: GeoJSON.Feature[]; action: string }) => {
+          const feature = e.features[0];
+          if (!feature) return;
+          const coords = (feature.geometry as GeoJSON.Polygon)
+            .coordinates[0] as [number, number][];
+          drawnFeatureIdRef.current = String(feature.id);
+          setDrawnCoords(coords);
+        },
+      );
 
       m.on('draw.delete', () => {
         drawnFeatureIdRef.current = null;
@@ -303,10 +323,10 @@ export const CreateLandModal = ({
       }
     };
 
-    setPaint('gl-draw-polygon-fill',   'fill-color',          hex);
-    setPaint('gl-draw-polygon-stroke', 'line-color',          hex);
-    setPaint('gl-draw-vertex',         'circle-stroke-color', hex);
-    setPaint('gl-draw-midpoint',       'circle-color',        hex);
+    setPaint('gl-draw-polygon-fill', 'fill-color', hex);
+    setPaint('gl-draw-polygon-stroke', 'line-color', hex);
+    setPaint('gl-draw-vertex', 'circle-stroke-color', hex);
+    setPaint('gl-draw-midpoint', 'circle-color', hex);
 
     const featureId = drawnFeatureIdRef.current;
     if (draw && featureId) {
@@ -340,7 +360,8 @@ export const CreateLandModal = ({
     });
   };
 
-  const isValid = landName.trim().length > 0 && drawnCoords !== null && !isSubmitting;
+  const isValid =
+    landName.trim().length > 0 && drawnCoords !== null && !isSubmitting;
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -365,7 +386,10 @@ export const CreateLandModal = ({
 
               {/* Land Name */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="land-name" className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <label
+                  htmlFor="land-name"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500"
+                >
                   ชื่อแปลงที่ดิน <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -380,7 +404,10 @@ export const CreateLandModal = ({
 
               {/* Crop Type */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="crop-type" className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                <label
+                  htmlFor="crop-type"
+                  className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5"
+                >
                   <Sprout size={13} />
                   พืชที่ปลูก
                 </label>
@@ -454,7 +481,9 @@ export const CreateLandModal = ({
                       style={{ background: `${color.toString('hex')}dd` }}
                     >
                       <span className="w-2 h-2 rounded-full bg-white/80 shrink-0" />
-                      {isEditMode && !isDrawing ? 'แก้ไขขอบเขตได้เลย' : 'วาดแปลงเรียบร้อย'}{' '}
+                      {isEditMode && !isDrawing
+                        ? 'แก้ไขขอบเขตได้เลย'
+                        : 'วาดแปลงเรียบร้อย'}{' '}
                       ({drawnCoords.length - 1} จุด)
                     </div>
                   )}
@@ -477,12 +506,31 @@ export const CreateLandModal = ({
                 className="px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-[#03662c] hover:bg-[#03662c]/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-[#03662c]/30 flex items-center gap-2"
               >
                 {isSubmitting && (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                 )}
-                {isSubmitting ? 'กำลังบันทึก...' : isEditMode ? 'บันทึก' : 'สร้างแปลง'}
+                {isSubmitting
+                  ? 'กำลังบันทึก...'
+                  : isEditMode
+                    ? 'บันทึก'
+                    : 'สร้างแปลง'}
               </button>
             </div>
           </Modal.Dialog>

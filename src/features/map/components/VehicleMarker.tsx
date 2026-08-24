@@ -1,5 +1,8 @@
 import type { VehicleData } from '@features/vehicles/types';
-import { getVehicleTypeMeta, VehicleTypeIcon } from '@features/vehicles/utils/vehicleDisplay';
+import {
+  getVehicleTypeMeta,
+  VehicleTypeIcon,
+} from '@features/vehicles/utils/vehicleDisplay';
 import { MapMarkerMount } from './MapMarkerMount';
 
 const STATUS_DOT: Record<VehicleData['status'], string> = {
@@ -14,7 +17,10 @@ type VehicleMarkerFaceProps = {
   onClick?: (vehicle: VehicleData) => void;
 };
 
-export function VehicleMarkerFace({ item: vehicle, onClick }: VehicleMarkerFaceProps) {
+export function VehicleMarkerFace({
+  item: vehicle,
+  onClick,
+}: VehicleMarkerFaceProps) {
   const meta = getVehicleTypeMeta(vehicle.type);
 
   return (
@@ -34,7 +40,11 @@ export function VehicleMarkerFace({ item: vehicle, onClick }: VehicleMarkerFaceP
           type={vehicle.type}
           size={20}
           className={meta.markerIcon}
-          style={vehicle.type === 'drone' ? { transform: `rotate(${vehicle.heading}deg)` } : undefined}
+          style={
+            vehicle.type === 'drone'
+              ? { transform: `rotate(${vehicle.heading}deg)` }
+              : undefined
+          }
         />
         <span
           className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white/80 ${STATUS_DOT[vehicle.status]}`}
@@ -55,7 +65,12 @@ type VehicleMarkerProps = {
 
 /** @deprecated ใช้ VehicleMapMarkerOverlay แทน */
 export const VehicleMarker = ({ vehicle, onClick }: VehicleMarkerProps) => (
-  <MapMarkerMount id={vehicle.id} lat={vehicle.lat} lng={vehicle.lng} anchor="bottom">
+  <MapMarkerMount
+    id={vehicle.id}
+    lat={vehicle.lat}
+    lng={vehicle.lng}
+    anchor="bottom"
+  >
     <VehicleMarkerFace item={vehicle} onClick={onClick} />
   </MapMarkerMount>
 );

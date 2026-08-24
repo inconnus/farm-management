@@ -1,12 +1,15 @@
 import { Column, Row } from '@app/layout';
-import type { VehicleData } from '@features/vehicles/types';
-import { getVehicleTypeMeta, VehicleTypeIcon } from '@features/vehicles/utils/vehicleDisplay';
-import { Card, Chip } from '@heroui/react';
-import { BatteryMediumIcon, GaugeIcon, MapPinIcon } from 'lucide-react';
 import {
   useLiveJobProgress,
   vehicleToProgressInput,
 } from '@features/automated-jobs/hooks/useLiveJobProgress';
+import type { VehicleData } from '@features/vehicles/types';
+import {
+  getVehicleTypeMeta,
+  VehicleTypeIcon,
+} from '@features/vehicles/utils/vehicleDisplay';
+import { Card, Chip } from '@heroui/react';
+import { BatteryMediumIcon, GaugeIcon, MapPinIcon } from 'lucide-react';
 import { VehicleLiveFeed } from './VehicleLiveFeed';
 
 const STATUS_LABEL: Record<VehicleData['status'], string> = {
@@ -41,13 +44,23 @@ export const VehiclePopup = ({ vehicle }: VehiclePopupProps) => {
     >
       {showLiveFeed && <VehicleLiveFeed label={vehicle.name} />}
 
-      <div className={`px-4 pt-4 pb-3 border-b border-gray-100 ${showLiveFeed ? 'pt-3' : ''}`}>
+      <div
+        className={`px-4 pt-4 pb-3 border-b border-gray-100 ${showLiveFeed ? 'pt-3' : ''}`}
+      >
         <Row className="items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.accentLight}`}>
-            <VehicleTypeIcon type={vehicle.type} size={18} className={meta.listIcon} />
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.accentLight}`}
+          >
+            <VehicleTypeIcon
+              type={vehicle.type}
+              size={18}
+              className={meta.listIcon}
+            />
           </div>
           <Column className="gap-0 min-w-0">
-            <span className="text-sm font-semibold text-gray-900 truncate">{vehicle.jobTitle}</span>
+            <span className="text-sm font-semibold text-gray-900 truncate">
+              {vehicle.jobTitle}
+            </span>
             <span className="text-[11px] text-gray-500">
               {vehicle.name} · {meta.label}
             </span>
@@ -59,23 +72,32 @@ export const VehiclePopup = ({ vehicle }: VehiclePopupProps) => {
         <Row className="items-center justify-between">
           <span className="text-xs text-gray-500">สถานะ</span>
           <Chip className={STATUS_CHIP[vehicle.status]}>
-            <Chip.Label className="text-[11px] font-medium">{STATUS_LABEL[vehicle.status]}</Chip.Label>
+            <Chip.Label className="text-[11px] font-medium">
+              {STATUS_LABEL[vehicle.status]}
+            </Chip.Label>
           </Chip>
         </Row>
 
         <Row className="gap-2">
           <Row className="flex-1 items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-2">
-            <BatteryMediumIcon size={14} className="text-emerald-600 shrink-0" />
+            <BatteryMediumIcon
+              size={14}
+              className="text-emerald-600 shrink-0"
+            />
             <Column className="gap-0">
               <span className="text-[10px] text-gray-400">แบตเตอรี่</span>
-              <span className="text-xs font-semibold text-gray-800">{vehicle.batteryPercent}%</span>
+              <span className="text-xs font-semibold text-gray-800">
+                {vehicle.batteryPercent}%
+              </span>
             </Column>
           </Row>
           <Row className="flex-1 items-center gap-1.5 bg-gray-50 rounded-xl px-2.5 py-2">
             <GaugeIcon size={14} className="text-blue-600 shrink-0" />
             <Column className="gap-0">
               <span className="text-[10px] text-gray-400">ความเร็ว</span>
-              <span className="text-xs font-semibold text-gray-800">{vehicle.speedKmh} km/h</span>
+              <span className="text-xs font-semibold text-gray-800">
+                {vehicle.speedKmh} km/h
+              </span>
             </Column>
           </Row>
         </Row>
@@ -88,7 +110,9 @@ export const VehiclePopup = ({ vehicle }: VehiclePopupProps) => {
         <Column className="gap-1.5">
           <Row className="items-center justify-between">
             <span className="text-xs text-gray-500">ความคืบหน้าเส้นทาง</span>
-            <span className={`text-xs font-semibold ${meta.accent}`}>{progressPct}%</span>
+            <span className={`text-xs font-semibold ${meta.accent}`}>
+              {progressPct}%
+            </span>
           </Row>
           <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
             <div

@@ -71,3 +71,45 @@ export async function fetchDevicesByFarm(farmId: string): Promise<DbDevice[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+export type CreateDeviceInput = {
+  farmId: string;
+  name: string;
+  deviceType: DbDevice['device_type'];
+  lat: number;
+  lng: number;
+  config?: Record<string, unknown>;
+};
+
+export async function createDevice(
+  input: CreateDeviceInput,
+): Promise<DbDevice> {
+  const { data, error } = await supabase
+    .from('farm_devices')
+    .insert({
+      farm_id: input.farmId,
+      name: input.name,
+      device_type: input.deviceType,
+      lat: input.lat,
+      lng: input.lng,
+      config: (input.config ?? {}) as Json,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function softDeleteDevice(id: string): Promise<DbDevice> {
+  const { data, error } = await supabase
+    .from('farm_devices')
+    .update({ is_active: false })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}

@@ -30,7 +30,8 @@ function loadSettings(): SensorApiSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<SensorApiSettings>;
-    if (parsed.mode !== 'last' && parsed.mode !== 'all') return DEFAULT_SETTINGS;
+    if (parsed.mode !== 'last' && parsed.mode !== 'all')
+      return DEFAULT_SETTINGS;
     return {
       mode: parsed.mode,
       timeRange:

@@ -18,7 +18,11 @@ function ringToSvgPoints(
   return coords.map(([lng, lat]) => project(lng, lat).join(',')).join(' ');
 }
 
-export function WorkPathPreview({ landCoords, workPath, marginM }: WorkPathPreviewProps) {
+export function WorkPathPreview({
+  landCoords,
+  workPath,
+  marginM,
+}: WorkPathPreviewProps) {
   const { landPoints, pathD, pathLengthKm, hasPath } = useMemo(() => {
     if (landCoords.length < 3) {
       return { landPoints: '', pathD: '', pathLengthKm: 0, hasPath: false };
@@ -125,7 +129,11 @@ export function WorkPathPreview({ landCoords, workPath, marginM }: WorkPathPrevi
           {hasPath ? `${workPath.length} จุด` : '—'}
           {marginM > 0 ? ` · margin ${marginM} ม.` : ''}
         </span>
-        <span>{hasPath ? `~${pathLengthKm < 1 ? `${Math.round(pathLengthKm * 1000)} ม.` : `${pathLengthKm.toFixed(2)} กม.`}` : ''}</span>
+        <span>
+          {hasPath
+            ? `~${pathLengthKm < 1 ? `${Math.round(pathLengthKm * 1000)} ม.` : `${pathLengthKm.toFixed(2)} กม.`}`
+            : ''}
+        </span>
       </div>
     </div>
   );

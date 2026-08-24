@@ -102,7 +102,9 @@ export function SidebarNav({
       setDirection(1);
       setStack((prev) => [...prev, pageKey]);
 
-      const staticPage = pages.find((p) => p.key === pageKey && !p.path.startsWith(':'));
+      const staticPage = pages.find(
+        (p) => p.key === pageKey && !p.path.startsWith(':'),
+      );
       if (staticPage) {
         const base = basePath.replace(/\/+$/, '');
         navigate(`${base}/${staticPage.path}`);
@@ -180,7 +182,9 @@ export function SidebarNav({
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', syncRightInset);
-      document.documentElement.style.removeProperty('--map-right-sidebar-inset');
+      document.documentElement.style.removeProperty(
+        '--map-right-sidebar-inset',
+      );
     };
   }, []);
 

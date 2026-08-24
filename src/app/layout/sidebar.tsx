@@ -1,11 +1,6 @@
 import { organizationsAtom, userAtom } from '@features/auth/store';
 import { SettingsModal } from '@features/settings/SettingsModal';
 import {
-  canAccessNavItem,
-  canAccessSettings,
-  ORG_ROLE_LABEL,
-} from '@shared/lib/permissions';
-import {
   Avatar,
   Button,
   Description,
@@ -14,7 +9,13 @@ import {
   Separator,
   Skeleton,
 } from '@heroui/react';
+import {
+  canAccessNavItem,
+  canAccessSettings,
+  ORG_ROLE_LABEL,
+} from '@shared/lib/permissions';
 import { supabase } from '@shared/lib/supabase/client';
+import { mapInstanceAtom } from '@shared/store/mapStore';
 import { setCurrentOrgAtom } from '@shared/store/orgStore';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
@@ -28,9 +29,8 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Column, Padding, Row, Spacer } from '.';
-import { mapInstanceAtom } from '@shared/store/mapStore';
 import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
+import { Column, Padding, Row, Spacer } from '.';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -92,9 +92,9 @@ const Sidebar = () => {
         {(showDashboard || showCamera) && (
           <>
             {(showCamera || showFarms) && (
-              <Row className='justify-between items-center'>
-                <span className='text-xs text-gray-500'>สาธารณะ</span>
-                <GlobeIcon className='size-3 text-gray-400' />
+              <Row className="justify-between items-center">
+                <span className="text-xs text-gray-500">สาธารณะ</span>
+                <GlobeIcon className="size-3 text-gray-400" />
               </Row>
             )}
             <ListBox
@@ -132,9 +132,9 @@ const Sidebar = () => {
         )}
         {showFarms && (
           <>
-            <Row className='justify-between items-center'>
-              <span className='text-xs text-gray-500'>ส่วนตัว</span>
-              <UserIcon className='size-3 text-gray-400' />
+            <Row className="justify-between items-center">
+              <span className="text-xs text-gray-500">ส่วนตัว</span>
+              <UserIcon className="size-3 text-gray-400" />
             </Row>
             <ListBox
               aria-label="Navigation"
@@ -209,7 +209,7 @@ const Sidebar = () => {
           <span>ออกจากระบบ</span>
         </Button>
       </div>
-    </Padding >
+    </Padding>
   );
 };
 

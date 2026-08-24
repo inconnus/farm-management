@@ -39,7 +39,11 @@ function dedupeAdjacent(path: [number, number][]): [number, number][] {
   return result;
 }
 
-function latSpacingDegrees(centerLng: number, centerLat: number, spacingMeters: number): number {
+function latSpacingDegrees(
+  centerLng: number,
+  centerLat: number,
+  spacingMeters: number,
+): number {
   const north = turf.destination(
     turf.point([centerLng, centerLat]),
     spacingMeters / 1000,
@@ -49,7 +53,9 @@ function latSpacingDegrees(centerLng: number, centerLat: number, spacingMeters: 
   return north.geometry.coordinates[1] - centerLat;
 }
 
-function suggestedSpacingMeters(polygon: turf.helpers.Feature<turf.helpers.Polygon>): number {
+function suggestedSpacingMeters(
+  polygon: turf.helpers.Feature<turf.helpers.Polygon>,
+): number {
   const bbox = turf.bbox(polygon);
   const centerLng = (bbox[0] + bbox[2]) / 2;
   const heightM = turf.distance(
@@ -78,7 +84,10 @@ function applyMargin(
 ): turf.helpers.Feature<turf.helpers.Polygon> {
   if (marginM <= 0) return polygon;
   try {
-    const shrunk = turf.buffer(polygon, -marginM, { units: 'meters', steps: 8 });
+    const shrunk = turf.buffer(polygon, -marginM, {
+      units: 'meters',
+      steps: 8,
+    });
     if (!shrunk?.geometry || shrunk.geometry.type !== 'Polygon') return polygon;
     const area = turf.area(shrunk);
     if (!Number.isFinite(area) || area < 1) return polygon;
@@ -97,7 +106,11 @@ function generateHorizontalBoustrophedon(
   const centerLng = (minLng + maxLng) / 2;
   const centerLat = (minLat + maxLat) / 2;
 
-  const latStep = latSpacingDegrees(centerLng, centerLat, Math.max(spacingM, 1));
+  const latStep = latSpacingDegrees(
+    centerLng,
+    centerLat,
+    Math.max(spacingM, 1),
+  );
   const lngPad = Math.max((maxLng - minLng) * 0.05, 0.0005);
 
   const path: [number, number][] = [];
@@ -121,7 +134,10 @@ function generateHorizontalBoustrophedon(
     for (let i = 0; i + 1 < sorted.length; i += 2) {
       const start = sorted[i];
       const end = sorted[i + 1];
-      const mid: [number, number] = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
+      const mid: [number, number] = [
+        (start[0] + end[0]) / 2,
+        (start[1] + end[1]) / 2,
+      ];
       if (turf.booleanPointInPolygon(turf.point(mid), polygon)) {
         rowSegments.push([start, end]);
       }
@@ -130,7 +146,9 @@ function generateHorizontalBoustrophedon(
     if (rowSegments.length === 0) continue;
 
     const leftToRight = rowIndex % 2 === 0;
-    const orderedSegments = leftToRight ? rowSegments : [...rowSegments].reverse();
+    const orderedSegments = leftToRight
+      ? rowSegments
+      : [...rowSegments].reverse();
 
     for (const [start, end] of orderedSegments) {
       path.push(leftToRight ? start : end, leftToRight ? end : start);
@@ -148,7 +166,9 @@ function rotatePath(
   pivot: turf.helpers.Feature<turf.helpers.Point>,
 ): [number, number][] {
   if (path.length === 0 || angleDeg === 0) return path;
-  const rotated = turf.transformRotate(turf.lineString(path), angleDeg, { pivot });
+  const rotated = turf.transformRotate(turf.lineString(path), angleDeg, {
+    pivot,
+  });
   return rotated.geometry.coordinates as [number, number][];
 }
 
@@ -161,12 +181,17 @@ export function generateWorkPath(
 ): [number, number][] {
   if (landCoords.length < 3) return [];
 
-  const { angleDeg, spacingM, marginM } = { ...DEFAULT_WORK_PATH_OPTIONS, ...options };
+  const { angleDeg, spacingM, marginM } = {
+    ...DEFAULT_WORK_PATH_OPTIONS,
+    ...options,
+  };
   const polygon = turf.polygon([closeRing(landCoords)]);
   const workingPolygon = applyMargin(polygon, marginM);
   const pivot = turf.centroid(workingPolygon);
 
-  const rotatedPolygon = turf.transformRotate(workingPolygon, -angleDeg, { pivot });
+  const rotatedPolygon = turf.transformRotate(workingPolygon, -angleDeg, {
+    pivot,
+  });
   const rotatedPath = generateHorizontalBoustrophedon(
     rotatedPolygon as turf.helpers.Feature<turf.helpers.Polygon>,
     spacingM,

@@ -1,3 +1,8 @@
+import {
+  canAccessNavItem,
+  ORG_ROLE_COLOR,
+  ORG_ROLE_LABEL,
+} from '@shared/lib/permissions';
 import type { OrgMembership } from '@store/orgStore';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -5,7 +10,6 @@ import type { Location } from 'react-router-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserOrganizations } from '../orgApi';
-import { canAccessNavItem, ORG_ROLE_COLOR, ORG_ROLE_LABEL } from '@shared/lib/permissions';
 import { getSafeRedirectPath } from '../returnToPath';
 
 // ─── Animation (iOS-style push/pop) ──────────────────────────────
@@ -101,7 +105,10 @@ function LoginStep({ onSuccess }: LoginStepProps) {
         )}
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700"
+          >
             อีเมล
           </label>
           <input
@@ -118,7 +125,10 @@ function LoginStep({ onSuccess }: LoginStepProps) {
 
         <div>
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
               รหัสผ่าน
             </label>
             <Link
@@ -146,9 +156,24 @@ function LoginStep({ onSuccess }: LoginStepProps) {
           className="flex w-full items-center justify-center rounded-lg bg-[#03662c] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#03662c]/80 focus:outline-none focus:ring-2 focus:ring-[#03662c]/50 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? (
-            <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="mr-2 h-4 w-4 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
           ) : null}
           {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
@@ -157,7 +182,10 @@ function LoginStep({ onSuccess }: LoginStepProps) {
 
       <p className="mt-5 text-center text-sm text-gray-500">
         ยังไม่มีบัญชี?{' '}
-        <Link to="/auth/register" className="font-semibold text-[#03662c] hover:text-[#03662c]/80">
+        <Link
+          to="/auth/register"
+          className="font-semibold text-[#03662c] hover:text-[#03662c]/80"
+        >
           สมัครสมาชิก
         </Link>
       </p>
@@ -192,8 +220,18 @@ function OrgSelectStep({ orgs, onSelect, onBack }: OrgSelectStepProps) {
           className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
           aria-label="กลับ"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
         <div>
@@ -205,12 +243,24 @@ function OrgSelectStep({ orgs, onSelect, onBack }: OrgSelectStepProps) {
       {orgs.length === 0 ? (
         <div className="py-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <svg
+              className="h-6 w-6 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
             </svg>
           </div>
           <p className="text-sm font-medium text-gray-700">ไม่มีองค์กร</p>
-          <p className="mt-1 text-xs text-gray-400">กรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มคุณเข้าองค์กร</p>
+          <p className="mt-1 text-xs text-gray-400">
+            กรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มคุณเข้าองค์กร
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -235,7 +285,9 @@ function OrgSelectStep({ orgs, onSelect, onBack }: OrgSelectStepProps) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-sm font-semibold text-gray-900">{org.name}</span>
+                  <span className="truncate text-sm font-semibold text-gray-900">
+                    {org.name}
+                  </span>
                   <span
                     className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium ${ORG_ROLE_COLOR[org.role] ?? ORG_ROLE_COLOR.member}`}
                   >
@@ -243,12 +295,24 @@ function OrgSelectStep({ orgs, onSelect, onBack }: OrgSelectStepProps) {
                   </span>
                 </div>
                 {org.description && (
-                  <p className="mt-0.5 truncate text-xs text-gray-500">{org.description}</p>
+                  <p className="mt-0.5 truncate text-xs text-gray-500">
+                    {org.description}
+                  </p>
                 )}
               </div>
 
-              <svg className="h-4 w-4 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="h-4 w-4 shrink-0 text-gray-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           ))}
@@ -359,7 +423,9 @@ export function LoginPage() {
       <div
         ref={bgRef}
         className="pointer-events-none absolute inset-0 scale-[1.05] bg-[url('/images/login_background2.webp')] bg-cover bg-center bg-no-repeat"
-        style={{ transition: 'transform 0.12s cubic-bezier(0.25,0.46,0.45,0.94)' }}
+        style={{
+          transition: 'transform 0.12s cubic-bezier(0.25,0.46,0.45,0.94)',
+        }}
       />
       {/* Overlay */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/0 to-black/60" />
@@ -385,7 +451,13 @@ export function LoginPage() {
                   exit="exit"
                   transition={pageTransition}
                   onAnimationComplete={updateHeight}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', willChange: 'transform, opacity' }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    willChange: 'transform, opacity',
+                  }}
                 >
                   <LoginStep onSuccess={handleLoginSuccess} />
                 </motion.div>
@@ -400,9 +472,19 @@ export function LoginPage() {
                   exit="exit"
                   transition={pageTransition}
                   onAnimationComplete={updateHeight}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', willChange: 'transform, opacity' }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    willChange: 'transform, opacity',
+                  }}
                 >
-                  <OrgSelectStep orgs={orgs} onSelect={handleOrgSelect} onBack={handleBack} />
+                  <OrgSelectStep
+                    orgs={orgs}
+                    onSelect={handleOrgSelect}
+                    onBack={handleBack}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

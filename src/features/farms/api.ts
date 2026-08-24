@@ -87,7 +87,10 @@ export type UpdateFarmInput = {
   lng?: number;
 };
 
-export async function updateFarm(farmId: string, input: UpdateFarmInput): Promise<void> {
+export async function updateFarm(
+  farmId: string,
+  input: UpdateFarmInput,
+): Promise<void> {
   const { data, error } = await supabase
     .from('farms')
     .update({
@@ -116,7 +119,10 @@ export type UpdateLandInput = {
   coords?: [number, number][];
 };
 
-export async function updateLand(landId: string, input: UpdateLandInput): Promise<void> {
+export async function updateLand(
+  landId: string,
+  input: UpdateLandInput,
+): Promise<void> {
   const { data, error } = await supabase
     .from('lands')
     .update({
@@ -130,7 +136,8 @@ export async function updateLand(landId: string, input: UpdateLandInput): Promis
     .eq('id', landId)
     .select('id');
   if (error) throw error;
-  if (!data || data.length === 0) throw new Error('ไม่มีสิทธิ์แก้ไขแปลงที่ดิน หรือไม่พบข้อมูล');
+  if (!data || data.length === 0)
+    throw new Error('ไม่มีสิทธิ์แก้ไขแปลงที่ดิน หรือไม่พบข้อมูล');
 }
 
 export async function deleteLand(landId: string): Promise<void> {

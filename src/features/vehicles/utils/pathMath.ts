@@ -32,5 +32,8 @@ export function computeJobProgress({
 
 export function measurePathLengthKm(path: [number, number][]): number {
   if (path.length < 2) return 0;
-  return Math.max(turf.length(turf.lineString(path), { units: 'kilometers' }), 0.001);
+  return Math.max(
+    turf.length(turf.lineString(path), { units: 'kilometers' }),
+    0.001,
+  );
 }

@@ -1,5 +1,5 @@
-import { Avatar, Modal, Separator } from '@heroui/react';
 import { SensorApiPanel } from '@features/settings/SensorApiPanel';
+import { Avatar, Modal, Separator } from '@heroui/react';
 import { supabase } from '@shared/lib/supabase/client';
 import type { Enums, Tables } from '@shared/lib/supabase/database.types';
 import {
@@ -47,8 +47,16 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: 'องค์กร',
     items: [
-      { key: 'members', label: 'สมาชิก', icon: <UsersIcon className="size-4" /> },
-      { key: 'teams', label: 'ทีม', icon: <ShieldCheckIcon className="size-4" /> },
+      {
+        key: 'members',
+        label: 'สมาชิก',
+        icon: <UsersIcon className="size-4" />,
+      },
+      {
+        key: 'teams',
+        label: 'ทีม',
+        icon: <ShieldCheckIcon className="size-4" />,
+      },
     ],
   },
   {
@@ -130,7 +138,10 @@ export const SettingsModal = ({
         if (error) throw error;
 
         const userIds = memberRows?.map((r) => r.user_id) ?? [];
-        let profileMap: Record<string, Pick<Tables<'profiles'>, 'full_name' | 'avatar_url'>> = {};
+        let profileMap: Record<
+          string,
+          Pick<Tables<'profiles'>, 'full_name' | 'avatar_url'>
+        > = {};
 
         if (userIds.length > 0) {
           const { data: profileRows } = await supabase
@@ -204,7 +215,9 @@ export const SettingsModal = ({
           countMap[row.team_id] = (countMap[row.team_id] ?? 0) + 1;
         }
 
-        setTeams(teamRows.map((t) => ({ ...t, memberCount: countMap[t.id] ?? 0 })));
+        setTeams(
+          teamRows.map((t) => ({ ...t, memberCount: countMap[t.id] ?? 0 })),
+        );
       } finally {
         setIsLoadingTeams(false);
       }
@@ -399,7 +412,9 @@ const MemberRow = ({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium text-gray-800 truncate">{displayName}</span>
+          <span className="text-sm font-medium text-gray-800 truncate">
+            {displayName}
+          </span>
           {isCurrentUser && (
             <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full border border-gray-200">
               คุณ
@@ -435,15 +450,25 @@ const TeamRow = ({ team }: { team: TeamWithMembers }) => (
   <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3 hover:bg-gray-50 transition-colors">
     <div
       className="size-8 rounded-xl shrink-0 flex items-center justify-center"
-      style={{ backgroundColor: `${team.color}22`, border: `1.5px solid ${team.color}44` }}
+      style={{
+        backgroundColor: `${team.color}22`,
+        border: `1.5px solid ${team.color}44`,
+      }}
     >
-      <div className="size-3 rounded-full" style={{ backgroundColor: team.color }} />
+      <div
+        className="size-3 rounded-full"
+        style={{ backgroundColor: team.color }}
+      />
     </div>
 
     <div className="flex-1 min-w-0">
-      <span className="text-sm font-medium text-gray-800 block truncate">{team.name}</span>
+      <span className="text-sm font-medium text-gray-800 block truncate">
+        {team.name}
+      </span>
       {team.description && (
-        <span className="text-xs text-gray-400 truncate block">{team.description}</span>
+        <span className="text-xs text-gray-400 truncate block">
+          {team.description}
+        </span>
       )}
     </div>
 

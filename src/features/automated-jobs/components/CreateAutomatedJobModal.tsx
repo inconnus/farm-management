@@ -40,7 +40,8 @@ function deviceBatteryPercent(device: DbDevice): number | null {
     device.config !== null &&
     typeof device.config === 'object' &&
     !Array.isArray(device.config) &&
-    typeof (device.config as Record<string, unknown>).battery_percent === 'number'
+    typeof (device.config as Record<string, unknown>).battery_percent ===
+      'number'
   ) {
     return (device.config as Record<string, unknown>).battery_percent as number;
   }
@@ -65,11 +66,21 @@ type PathSliderProps = {
   onChange: (value: number) => void;
 };
 
-function PathSlider({ label, value, min, max, step, unit, onChange }: PathSliderProps) {
+function PathSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: PathSliderProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <Row className="items-center justify-between">
-        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</label>
+        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+          {label}
+        </label>
         <span className="text-xs font-medium text-gray-700 tabular-nums">
           {value}
           {unit}
@@ -175,7 +186,10 @@ export function CreateAutomatedJobModal({
     pathPointCount >= 2 &&
     !isPending;
 
-  const updatePathOption = <K extends keyof WorkPathOptions>(key: K, value: WorkPathOptions[K]) => {
+  const updatePathOption = <K extends keyof WorkPathOptions>(
+    key: K,
+    value: WorkPathOptions[K],
+  ) => {
     setPathOptions((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -209,7 +223,9 @@ export function CreateAutomatedJobModal({
                   }}
                   className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:bg-white transition-all ${titleError ? 'border-red-300 bg-red-50 focus:border-red-400' : 'border-gray-200 bg-gray-50 focus:border-[#03662c]'}`}
                 />
-                {titleError && <p className="text-xs text-red-500">กรุณากรอกชื่องาน</p>}
+                {titleError && (
+                  <p className="text-xs text-red-500">กรุณากรอกชื่องาน</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -231,7 +247,8 @@ export function CreateAutomatedJobModal({
                 </label>
                 {vehicles.length === 0 ? (
                   <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                    ยังไม่มียานพาหนะในฟาร์มนี้ — เพิ่มอุปกรณ์ประเภท tractor หรือ drone ใน farm_devices ก่อน
+                    ยังไม่มียานพาหนะในฟาร์มนี้ — เพิ่มอุปกรณ์ประเภท tractor หรือ drone ใน
+                    farm_devices ก่อน
                   </p>
                 ) : availableVehicles.length === 0 ? (
                   <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
@@ -244,7 +261,9 @@ export function CreateAutomatedJobModal({
                       const isBusy = !!busy;
                       const selected = deviceId === device.id;
                       const battery = deviceBatteryPercent(device);
-                      const vehicleType = deviceTypeToVehicleType(device.device_type);
+                      const vehicleType = deviceTypeToVehicleType(
+                        device.device_type,
+                      );
                       const meta = getVehicleTypeMeta(vehicleType);
                       const speedKmh = getDeviceSpeedKmh(device);
 
@@ -264,19 +283,26 @@ export function CreateAutomatedJobModal({
                                 : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-white hover:border-gray-300'
                           }`}
                         >
-                          <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isBusy ? 'bg-gray-200' : meta.accentLight}`}>
+                          <span
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isBusy ? 'bg-gray-200' : meta.accentLight}`}
+                          >
                             <VehicleTypeIcon
                               type={vehicleType}
                               size={16}
-                              className={isBusy ? 'text-gray-400' : meta.listIcon}
+                              className={
+                                isBusy ? 'text-gray-400' : meta.listIcon
+                              }
                             />
                           </span>
                           <Column className="gap-0 min-w-0 flex-1">
                             <span className="truncate">{device.name}</span>
-                            <span className={`text-[11px] font-normal ${isBusy ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <span
+                              className={`text-[11px] font-normal ${isBusy ? 'text-gray-400' : 'text-gray-500'}`}
+                            >
                               {isBusy ? (
                                 <>
-                                  กำลังใช้งาน · {BUSY_STATUS_LABEL[busy.status]} · {busy.jobTitle}
+                                  กำลังใช้งาน · {BUSY_STATUS_LABEL[busy.status]} ·{' '}
+                                  {busy.jobTitle}
                                 </>
                               ) : (
                                 <>
@@ -287,7 +313,9 @@ export function CreateAutomatedJobModal({
                               )}
                             </span>
                           </Column>
-                          {selected && !isBusy && <span className="text-[#03662c]">✓</span>}
+                          {selected && !isBusy && (
+                            <span className="text-[#03662c]">✓</span>
+                          )}
                         </button>
                       );
                     })}
@@ -297,7 +325,9 @@ export function CreateAutomatedJobModal({
 
               <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-emerald-900">กำหนดเส้นทาง</span>
+                  <span className="text-sm font-semibold text-emerald-900">
+                    กำหนดเส้นทาง
+                  </span>
                   <span className="text-xs text-emerald-800/75">
                     ปรับมุม ระยะห่าง และ margin แล้วดูตัวอย่างด้านล่าง
                   </span>
@@ -354,9 +384,24 @@ export function CreateAutomatedJobModal({
                 className="px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-[#03662c] hover:bg-[#03662c]/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-[#03662c]/30 flex items-center gap-2"
               >
                 {isPending && (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                 )}
                 {isPending ? 'กำลังสร้าง...' : 'สร้างงาน'}

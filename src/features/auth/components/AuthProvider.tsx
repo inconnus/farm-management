@@ -28,7 +28,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // ถ้าไม่มี user → ready ทันที
           // ถ้า user คนเดิม → คงค่าเดิมไว้ (เช่น tab focus / token refresh)
           // ถ้า user ใหม่ → reset รอ fetch
-          isProfileReady: !session?.user ? true : sameUser ? prev.isProfileReady : false,
+          isProfileReady: !session?.user
+            ? true
+            : sameUser
+              ? prev.isProfileReady
+              : false,
         };
       });
     });
@@ -46,7 +50,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       Promise.all([fetchProfile(userId), fetchUserOrganizations(userId)]).then(
         ([profile, organizations]) => {
           if (cancelled) return;
-          setAuth((prev) => ({ ...prev, profile, organizations, isProfileReady: true }));
+          setAuth((prev) => ({
+            ...prev,
+            profile,
+            organizations,
+            isProfileReady: true,
+          }));
         },
       );
     };

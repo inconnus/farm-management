@@ -26,7 +26,9 @@ export function VehicleLiveFeed({ label }: VehicleLiveFeedProps) {
         </span>
       </div>
       <div className="absolute bottom-3 left-3 right-3">
-        <p className="text-sm font-semibold text-white drop-shadow-md truncate">{label}</p>
+        <p className="text-sm font-semibold text-white drop-shadow-md truncate">
+          {label}
+        </p>
         <p className="text-[10px] text-white/75">มุมมองจากรถไถ · สัญญาณจำลอง</p>
       </div>
     </div>

@@ -30,7 +30,10 @@ type LightMarkerFaceProps = {
   onClick?: (light: LightData) => void;
 };
 
-export function LightMarkerFace({ item: light, onClick }: LightMarkerFaceProps) {
+export function LightMarkerFace({
+  item: light,
+  onClick,
+}: LightMarkerFaceProps) {
   return (
     <button
       type="button"
@@ -50,7 +53,11 @@ export function LightMarkerFace({ item: light, onClick }: LightMarkerFaceProps) 
       >
         <SunIcon
           size={18}
-          className={light.isOn ? 'text-white group-hover:text-yellow-100 transition-colors' : 'text-white/60 group-hover:text-white transition-colors'}
+          className={
+            light.isOn
+              ? 'text-white group-hover:text-yellow-100 transition-colors'
+              : 'text-white/60 group-hover:text-white transition-colors'
+          }
         />
         {light.isOn && (
           <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-yellow-300 border border-black/30 animate-pulse" />

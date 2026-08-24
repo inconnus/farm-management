@@ -1,5 +1,8 @@
-import { computeJobProgress, type JobProgressInput } from '@features/vehicles/utils/pathMath';
 import type { VehicleData } from '@features/vehicles/types';
+import {
+  computeJobProgress,
+  type JobProgressInput,
+} from '@features/vehicles/utils/pathMath';
 import { useEffect, useState } from 'react';
 
 export function vehicleToProgressInput(

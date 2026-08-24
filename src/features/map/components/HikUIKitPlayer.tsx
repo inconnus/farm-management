@@ -30,7 +30,11 @@ function decodeTicket(ticket: string): string {
 /**
  * Live preview ผ่าน ezuikit-js — ดึง url/ticket จาก ISGP แล้วเล่นด้วย EZUIKitPlayer
  */
-export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlayerProps) {
+export function HikUIKitPlayer({
+  params,
+  instanceKey,
+  className,
+}: HikUIKitPlayerProps) {
   const containerId = `hik-ezuikit-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   const playerRef = useRef<EZUIKitPlayer | null>(null);
@@ -95,7 +99,8 @@ export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlaye
         };
 
         if (!res.ok || !json.data?.url) {
-          const msg = json.msg || json.message || res.statusText || 'ไม่ทราบสาเหตุ';
+          const msg =
+            json.msg || json.message || res.statusText || 'ไม่ทราบสาเหตุ';
           throw new Error(`${msg}${res.status ? ` (${res.status})` : ''}`);
         }
 
@@ -136,7 +141,10 @@ export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlaye
           handleError: (err) => {
             if (cancelled) return;
             clearLoading();
-            if (err.type === 'handleRunTimeInfoError' && err.data?.nErrorCode === 5) {
+            if (
+              err.type === 'handleRunTimeInfoError' &&
+              err.data?.nErrorCode === 5
+            ) {
               setError('รหัสผ่านอุปกรณ์ไม่ถูกต้อง');
               return;
             }
@@ -146,7 +154,10 @@ export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlaye
 
         playerRef.current = player;
 
-        player.eventEmitter.on(EZUIKitPlayer.EVENTS.firstFrameDisplay, onFirstFrame);
+        player.eventEmitter.on(
+          EZUIKitPlayer.EVENTS.firstFrameDisplay,
+          onFirstFrame,
+        );
         hideLoadingTimer = window.setTimeout(clearLoading, 8000);
 
         resizeObserver = new ResizeObserver(() => {
@@ -182,7 +193,10 @@ export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlaye
       playerRef.current = null;
       if (player) {
         try {
-          player.eventEmitter.off(EZUIKitPlayer.EVENTS.firstFrameDisplay, onFirstFrame);
+          player.eventEmitter.off(
+            EZUIKitPlayer.EVENTS.firstFrameDisplay,
+            onFirstFrame,
+          );
           player.stop();
           player.destroy();
         } catch {
@@ -200,8 +214,13 @@ export function HikUIKitPlayer({ params, instanceKey, className }: HikUIKitPlaye
   ]);
 
   return (
-    <div className={`relative ${className ?? 'h-full w-full min-h-[180px] bg-black'}`}>
-      <div id={containerId} className="h-full w-full min-h-[180px] bg-[#4C4B4B]" />
+    <div
+      className={`relative ${className ?? 'h-full w-full min-h-[180px] bg-black'}`}
+    >
+      <div
+        id={containerId}
+        className="h-full w-full min-h-[180px] bg-[#4C4B4B]"
+      />
       {loading && !error && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-white text-sm pointer-events-none">
           กำลังเชื่อมต่อกล้อง…

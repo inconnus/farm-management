@@ -1,5 +1,5 @@
-import { Dropdown, Label } from '@heroui/react';
 import { EllipsisVertical } from '@gravity-ui/icons';
+import { Dropdown, Label } from '@heroui/react';
 
 export type DropdownMenuItem = {
   id: string;
@@ -14,7 +14,11 @@ type DropdownMenuProps = {
   triggerClassName?: string;
 };
 
-export function DropdownMenu({ items = [], onAction, triggerClassName }: DropdownMenuProps) {
+export function DropdownMenu({
+  items = [],
+  onAction,
+  triggerClassName,
+}: DropdownMenuProps) {
   return (
     <Dropdown>
       <Dropdown.Trigger
@@ -38,11 +42,19 @@ export function DropdownMenu({ items = [], onAction, triggerClassName }: Dropdow
               >
                 <div className="flex items-center gap-2">
                   {item.icon && (
-                    <span className={item.variant === 'danger' ? 'text-danger' : 'text-muted'}>
+                    <span
+                      className={
+                        item.variant === 'danger' ? 'text-danger' : 'text-muted'
+                      }
+                    >
                       {item.icon}
                     </span>
                   )}
-                  <Label className={item.variant === 'danger' ? 'text-danger' : undefined}>
+                  <Label
+                    className={
+                      item.variant === 'danger' ? 'text-danger' : undefined
+                    }
+                  >
                     {item.label}
                   </Label>
                 </div>

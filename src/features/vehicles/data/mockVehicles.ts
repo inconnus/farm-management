@@ -1,14 +1,18 @@
-import * as turf from '@turf/turf';
 import type { LandData } from '@shared/types/lands';
+import * as turf from '@turf/turf';
+import type { VehicleData } from '../types';
 import { generateWorkPath } from '../utils/generateWorkPath';
 import {
   DEFAULT_SIMULATION_SPEED_FACTOR,
   measurePathLengthKm,
 } from '../utils/pathMath';
-import type { VehicleData } from '../types';
 
-export { computeDefaultWorkPathOptions, DEFAULT_WORK_PATH_OPTIONS, generateWorkPath } from '../utils/generateWorkPath';
 export type { WorkPathOptions } from '../utils/generateWorkPath';
+export {
+  computeDefaultWorkPathOptions,
+  DEFAULT_WORK_PATH_OPTIONS,
+  generateWorkPath,
+} from '../utils/generateWorkPath';
 
 /** แปลงที่ใช้สำหรับ mock เส้นทางรถไถ */
 export const MOCK_TRACTOR_LAND_ID = '477812f5-8a3e-4e88-b7fc-fdd0941d5342';
@@ -19,7 +23,10 @@ function headingBetween(from: [number, number], to: [number, number]): number {
   return (Math.atan2(dLng, dLat) * 180) / Math.PI;
 }
 
-export function positionAlongPath(path: [number, number][], progress: number): {
+export function positionAlongPath(
+  path: [number, number][],
+  progress: number,
+): {
   lat: number;
   lng: number;
   heading: number;
@@ -62,7 +69,10 @@ export function getCompletedPathCoords(
   return slice.geometry.coordinates as [number, number][];
 }
 
-export function getMockVehiclesForLand(farmId: string, land: LandData): VehicleData[] {
+export function getMockVehiclesForLand(
+  farmId: string,
+  land: LandData,
+): VehicleData[] {
   if (land.coords.length < 3) return [];
 
   const workPath = generateWorkPath(land.coords);
@@ -96,7 +106,10 @@ export function getMockVehiclesForLand(farmId: string, land: LandData): VehicleD
 }
 
 /** @deprecated ใช้ getMockVehiclesForLand แทน */
-export function getMockVehiclesForFarm(farmId: string, lands: LandData[]): VehicleData[] {
+export function getMockVehiclesForFarm(
+  farmId: string,
+  lands: LandData[],
+): VehicleData[] {
   const land =
     lands.find((l) => l.id === MOCK_TRACTOR_LAND_ID && l.coords.length >= 3) ??
     lands.find((l) => l.coords.length >= 3);

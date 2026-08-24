@@ -225,7 +225,9 @@ export const SummaryModal = ({
                         <span className="text-gray-800 font-bold text-xl leading-none">
                           {Math.round(onlinePercent)}%
                         </span>
-                        <span className="text-gray-500 text-[10px]">ออนไลน์</span>
+                        <span className="text-gray-500 text-[10px]">
+                          ออนไลน์
+                        </span>
                       </div>
                     </div>
                     {/* Legend */}

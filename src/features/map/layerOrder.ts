@@ -23,7 +23,9 @@ export function movePathLayersToTop(map: mapboxgl.Map) {
 
   const pathLayerIds = layers
     .map((l) => l.id)
-    .filter((id) => id.startsWith('path-outline-') || id.startsWith('path-layer-'));
+    .filter(
+      (id) => id.startsWith('path-outline-') || id.startsWith('path-layer-'),
+    );
 
   for (const id of pathLayerIds) {
     if (map.getLayer(id)) map.moveLayer(id);

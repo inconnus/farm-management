@@ -1,11 +1,15 @@
+import {
+  canAccessNavItem,
+  ORG_ROLE_COLOR,
+  ORG_ROLE_LABEL,
+} from '@shared/lib/permissions';
 import type { OrgMembership } from '@store/orgStore';
-import { canAccessNavItem, ORG_ROLE_COLOR, ORG_ROLE_LABEL } from '@shared/lib/permissions';
 import { useAtomValue } from 'jotai';
 import type { Location } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { isAuthLoadingAtom, organizationsAtom } from '../store';
 import { getSafeRedirectPath } from '../returnToPath';
+import { isAuthLoadingAtom, organizationsAtom } from '../store';
 
 export function OrgSelectPage() {
   const navigate = useNavigate();
@@ -21,9 +25,12 @@ export function OrgSelectPage() {
       navigate(target, { replace: true });
       return;
     }
-    navigate(`/${org.slug}/${canAccessNavItem(org.role, 'farms') ? 'farms' : 'dashboard'}`, {
-      replace: true,
-    });
+    navigate(
+      `/${org.slug}/${canAccessNavItem(org.role, 'farms') ? 'farms' : 'dashboard'}`,
+      {
+        replace: true,
+      },
+    );
   };
 
   const handleSignOut = async () => {

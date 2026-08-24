@@ -1,6 +1,6 @@
 import { mapInstanceAtom } from '@store/mapStore';
 import { useAtomValue } from 'jotai';
-import mapboxgl from 'mapbox-gl';
+import type mapboxgl from 'mapbox-gl';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { vehicleMapPathsAtom } from '../store/vehicleMapPathsAtom';
@@ -30,7 +30,9 @@ export function MapPathOverlay() {
     const mount = document.createElement('div');
     mount.className = 'vehicle-path-overlay';
 
-    const canvasContainer = container.querySelector('.mapboxgl-canvas-container');
+    const canvasContainer = container.querySelector(
+      '.mapboxgl-canvas-container',
+    );
     if (canvasContainer) {
       canvasContainer.appendChild(mount);
     } else {

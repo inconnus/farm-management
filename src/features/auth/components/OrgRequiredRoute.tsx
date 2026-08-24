@@ -1,6 +1,10 @@
 import { useAtomValue } from 'jotai';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
-import { isAuthInitializedAtom, isProfileReadyAtom, organizationsAtom } from '../store';
+import {
+  isAuthInitializedAtom,
+  isProfileReadyAtom,
+  organizationsAtom,
+} from '../store';
 
 type OrgRequiredRouteProps = {
   children: React.ReactNode;

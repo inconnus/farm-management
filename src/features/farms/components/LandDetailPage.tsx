@@ -1,15 +1,4 @@
 import { Column, Row } from '@app/layout';
-import type { FarmMembersData, FarmTeam } from '@features/farms/hooks/useFarmMembersQuery';
-import { useOrgMembersWithFarmTeamsQuery } from '@features/farms/hooks/useFarmMembersQuery';
-import type { LandPopupData, LandTask, TaskStatus } from '@features/map/types';
-import {
-  advanceDbStatus,
-  useCreateTask,
-  useDeleteTask,
-  useLandTasksQuery,
-  useUpdateTask,
-  useUpdateTaskStatus,
-} from '@features/tasks/hooks/useLandTasksQuery';
 import { CreateAutomatedJobModal } from '@features/automated-jobs/components/CreateAutomatedJobModal';
 import { JobProgressPercent } from '@features/automated-jobs/components/JobProgressPercent';
 import {
@@ -19,15 +8,47 @@ import {
 } from '@features/automated-jobs/hooks/useLandAutomatedJobsQuery';
 import { automatedJobToVehicleData } from '@features/automated-jobs/utils/toVehicleData';
 import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
+import type {
+  FarmMembersData,
+  FarmTeam,
+} from '@features/farms/hooks/useFarmMembersQuery';
+import { useOrgMembersWithFarmTeamsQuery } from '@features/farms/hooks/useFarmMembersQuery';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
-import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
-import { vehicleOverlayActiveAtom } from '@features/map/store/vehicleOverlayActiveAtom';
 import { selectedVehicleMapIdAtom } from '@features/map/store/selectedVehicleMapIdAtom';
-import { getDeviceSpeedKmh, getVehicleTypeMeta, isAutomatedVehicleDevice, VehicleTypeIcon } from '@features/vehicles/utils/vehicleDisplay';
+import { vehicleOverlayActiveAtom } from '@features/map/store/vehicleOverlayActiveAtom';
+import { vehiclePopupLiveLngLatRef } from '@features/map/store/vehiclePopupLivePositionRef';
+import type { LandPopupData, LandTask, TaskStatus } from '@features/map/types';
+import {
+  advanceDbStatus,
+  useCreateTask,
+  useDeleteTask,
+  useLandTasksQuery,
+  useUpdateTask,
+  useUpdateTaskStatus,
+} from '@features/tasks/hooks/useLandTasksQuery';
 import type { VehicleData } from '@features/vehicles/types';
-import { mapInstanceAtom } from '@store/mapStore';
-import { Button, Calendar, Chip, DateField, DatePicker, Modal, Separator, Tabs } from '@heroui/react';
+import {
+  getDeviceSpeedKmh,
+  getVehicleTypeMeta,
+  isAutomatedVehicleDevice,
+  VehicleTypeIcon,
+} from '@features/vehicles/utils/vehicleDisplay';
+import {
+  Button,
+  Calendar,
+  Chip,
+  DateField,
+  DatePicker,
+  Modal,
+  Separator,
+  Tabs,
+} from '@heroui/react';
 import { parseDate } from '@internationalized/date';
+import { currentOrgIdAtom } from '@shared/store/orgStore';
+import { DropdownMenu } from '@shared/ui/DropdownMenu';
+import { mapInstanceAtom } from '@store/mapStore';
+import * as turf from '@turf/turf';
+import { useAtomValue, useSetAtom } from 'jotai';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -39,9 +60,6 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { currentOrgIdAtom } from '@shared/store/orgStore';
-import { DropdownMenu } from '@shared/ui/DropdownMenu';
-import { useAtomValue, useSetAtom } from 'jotai';
 import mapboxgl from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -49,13 +67,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const MAPBOX_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
-function buildPolygonMapUrl(coords: [number, number][], color = '#22c55e'): string | null {
+function buildPolygonMapUrl(
+  coords: [number, number][],
+  color = '#22c55e',
+): string | null {
   if (coords.length < 3) return null;
   const ring = [...coords];
-  if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) ring.push(ring[0]);
+  if (
+    ring[0][0] !== ring[ring.length - 1][0] ||
+    ring[0][1] !== ring[ring.length - 1][1]
+  )
+    ring.push(ring[0]);
   const geojson = {
     type: 'Feature',
-    properties: { stroke: color, 'stroke-width': 2, 'stroke-opacity': 0.9, fill: color, 'fill-opacity': 0.25 },
+    properties: {
+      stroke: color,
+      'stroke-width': 2,
+      'stroke-opacity': 0.9,
+      fill: color,
+      'fill-opacity': 0.25,
+    },
     geometry: { type: 'Polygon', coordinates: [ring] },
   };
   return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encodeURIComponent(JSON.stringify(geojson))})/auto/360x160@2x?access_token=${MAPBOX_TOKEN}&padding=60&attribution=false&logo=false`;
@@ -70,18 +101,68 @@ function dbStatusToUi(status: string): TaskStatus | null {
 
 function formatDueDate(dueDate: string | null): string | undefined {
   if (!dueDate) return undefined;
-  return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dueDate));
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(dueDate));
 }
 
-const memberName = (membersData: FarmMembersData | undefined, assigneeId: string | null): string => {
+function getLandAreaMetrics(coords: [number, number][]) {
+  if (coords.length < 3) return null;
+
+  const ring = [...coords];
+  const [first, last] = [ring[0], ring[ring.length - 1]];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    ring.push(first);
+  }
+
+  const sqm = turf.area(turf.polygon([ring]));
+  if (!Number.isFinite(sqm) || sqm <= 0) return null;
+
+  const totalRai = sqm / 1600;
+  const totalSquareWah = Math.max(1, Math.round(sqm / 4));
+  const rai = Math.floor(totalSquareWah / 400);
+  const remainAfterRai = totalSquareWah % 400;
+  const ngan = Math.floor(remainAfterRai / 100);
+  const squareWah = remainAfterRai % 100;
+
+  return {
+    totalRai,
+    areaLabel: `${rai} ไร่ ${ngan} งาน ${squareWah} วา`,
+    carbonCreditTco2e: totalRai * 0.5,
+  };
+}
+
+const memberName = (
+  membersData: FarmMembersData | undefined,
+  assigneeId: string | null,
+): string => {
   if (!assigneeId) return 'ยังไม่มอบหมาย';
-  return membersData?.allMembers.find((m) => m.id === assigneeId)?.name ?? 'ไม่ระบุ';
+  return (
+    membersData?.allMembers.find((m) => m.id === assigneeId)?.name ?? 'ไม่ระบุ'
+  );
 };
 
-const STATUS_META: Record<TaskStatus, { label: string; dot: string; badge: string }> = {
-  pending_confirmation: { label: 'รอยืนยัน',      dot: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-700' },
-  in_progress:         { label: 'กำลังดำเนินการ', dot: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-700' },
-  done:                { label: 'สำเร็จ',          dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
+const STATUS_META: Record<
+  TaskStatus,
+  { label: string; dot: string; badge: string }
+> = {
+  pending_confirmation: {
+    label: 'รอยืนยัน',
+    dot: 'bg-sky-400',
+    badge: 'bg-sky-50 text-sky-700',
+  },
+  in_progress: {
+    label: 'กำลังดำเนินการ',
+    dot: 'bg-amber-400',
+    badge: 'bg-amber-50 text-amber-700',
+  },
+  done: {
+    label: 'สำเร็จ',
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700',
+  },
 };
 
 type FilterKey = 'all' | TaskStatus;
@@ -153,14 +234,19 @@ const InlineAssigneePicker = ({
 }) => {
   const isSelected = (sel: AssigneeSelection) => {
     if (sel.kind !== value.kind) return false;
-    if (sel.kind === 'team' && value.kind === 'team') return sel.id === value.id;
-    if (sel.kind === 'user' && value.kind === 'user') return sel.id === value.id;
+    if (sel.kind === 'team' && value.kind === 'team')
+      return sel.id === value.id;
+    if (sel.kind === 'user' && value.kind === 'user')
+      return sel.id === value.id;
     return sel.kind === 'none';
   };
 
-  const btnBase = 'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm text-left transition-all';
-  const btnSelected = 'border-[#03662c] bg-[#03662c]/5 text-[#03662c] font-semibold';
-  const btnIdle = 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-white hover:border-gray-300';
+  const btnBase =
+    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm text-left transition-all';
+  const btnSelected =
+    'border-[#03662c] bg-[#03662c]/5 text-[#03662c] font-semibold';
+  const btnIdle =
+    'border-gray-200 bg-gray-50 text-gray-700 hover:bg-white hover:border-gray-300';
 
   if (!membersData) {
     return <p className="text-sm text-gray-400 py-2">กำลังโหลดรายชื่อ…</p>;
@@ -178,16 +264,25 @@ const InlineAssigneePicker = ({
       >
         <ClipboardList size={15} className="shrink-0 text-gray-400" />
         <span>ยังไม่มอบหมาย</span>
-        {isSelected({ kind: 'none' }) && <span className="ml-auto text-[#03662c]">✓</span>}
+        {isSelected({ kind: 'none' }) && (
+          <span className="ml-auto text-[#03662c]">✓</span>
+        )}
       </button>
 
       {/* ── ทีม ── */}
       {teams.length > 0 && (
         <>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-1 px-1">ทีม</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-1 px-1">
+            ทีม
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {teams.map((team: FarmTeam) => {
-              const sel: AssigneeSelection = { kind: 'team', id: team.id, name: team.name, color: team.color };
+              const sel: AssigneeSelection = {
+                kind: 'team',
+                id: team.id,
+                name: team.name,
+                color: team.color,
+              };
               const active = isSelected(sel);
               return (
                 <button
@@ -200,8 +295,12 @@ const InlineAssigneePicker = ({
                     className="w-3 h-3 rounded-full shrink-0"
                     style={{ background: team.color }}
                   />
-                  <span className="truncate text-gray-800 text-xs">{team.name}</span>
-                  {active && <span className="ml-auto text-[#03662c] text-xs">✓</span>}
+                  <span className="truncate text-gray-800 text-xs">
+                    {team.name}
+                  </span>
+                  {active && (
+                    <span className="ml-auto text-[#03662c] text-xs">✓</span>
+                  )}
                 </button>
               );
             })}
@@ -212,10 +311,16 @@ const InlineAssigneePicker = ({
       {/* ── สมาชิก ── */}
       {membersData.allMembers.length > 0 ? (
         <>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-1 px-1">สมาชิก</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-1 px-1">
+            สมาชิก
+          </p>
           <div className="flex flex-col gap-1.5">
             {membersData.allMembers.map((m) => {
-              const sel: AssigneeSelection = { kind: 'user', id: m.id, name: m.name };
+              const sel: AssigneeSelection = {
+                kind: 'user',
+                id: m.id,
+                name: m.name,
+              };
               const active = isSelected(sel);
               return (
                 <button
@@ -305,7 +410,10 @@ const TaskModal = ({
 
   const handleSubmit = () => {
     const t = title.trim();
-    if (!t) { setTitleError(true); return; }
+    if (!t) {
+      setTitleError(true);
+      return;
+    }
     setTitleError(false);
     onSubmit({
       title: t,
@@ -340,15 +448,22 @@ const TaskModal = ({
                   type="text"
                   placeholder="เช่น รดน้ำแปลง A, ฉีดยาป้องกันโรค"
                   value={title}
-                  onChange={(e) => { setTitle(e.target.value); if (titleError) setTitleError(false); }}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (titleError) setTitleError(false);
+                  }}
                   className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:bg-white transition-all ${titleError ? 'border-red-300 bg-red-50 focus:border-red-400' : 'border-gray-200 bg-gray-50 focus:border-[#03662c]'}`}
                 />
-                {titleError && <p className="text-xs text-red-500">กรุณากรอกชื่องาน</p>}
+                {titleError && (
+                  <p className="text-xs text-red-500">กรุณากรอกชื่องาน</p>
+                )}
               </div>
 
               {/* ── รายละเอียด ── */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">รายละเอียด</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  รายละเอียด
+                </label>
                 <textarea
                   placeholder="อธิบายขั้นตอน วัสดุ หรือหมายเหตุ"
                   value={description}
@@ -368,7 +483,10 @@ const TaskModal = ({
                   onChange={(date) => setDueDate(date ? date.toString() : '')}
                   className="w-full"
                 >
-                  <DateField.Group fullWidth className="rounded-xl border border-gray-200 bg-gray-50 focus-within:border-[#03662c] focus-within:bg-white transition-all">
+                  <DateField.Group
+                    fullWidth
+                    className="rounded-xl border border-gray-200 bg-gray-50 focus-within:border-[#03662c] focus-within:bg-white transition-all"
+                  >
                     <DateField.Input className="px-4 py-3 text-sm text-gray-800">
                       {(segment) => <DateField.Segment segment={segment} />}
                     </DateField.Input>
@@ -387,9 +505,13 @@ const TaskModal = ({
                       </Calendar.Header>
                       <Calendar.Grid>
                         <Calendar.GridHeader>
-                          {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
+                          {(day) => (
+                            <Calendar.HeaderCell>{day}</Calendar.HeaderCell>
+                          )}
                         </Calendar.GridHeader>
-                        <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
+                        <Calendar.GridBody>
+                          {(date) => <Calendar.Cell date={date} />}
+                        </Calendar.GridBody>
                       </Calendar.Grid>
                     </Calendar>
                   </DatePicker.Popover>
@@ -408,7 +530,11 @@ const TaskModal = ({
                     </span>
                   )}
                 </div>
-                <InlineAssigneePicker membersData={membersData} value={assignee} onChange={setAssignee} />
+                <InlineAssigneePicker
+                  membersData={membersData}
+                  value={assignee}
+                  onChange={setAssignee}
+                />
               </div>
             </Modal.Body>
 
@@ -428,14 +554,33 @@ const TaskModal = ({
                 className="px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-[#03662c] hover:bg-[#03662c]/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-[#03662c]/30 flex items-center gap-2"
               >
                 {isPending && (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                 )}
                 {isPending
-                  ? (isEditMode ? 'กำลังบันทึก...' : 'กำลังสร้าง...')
-                  : (isEditMode ? 'บันทึก' : 'สร้างงาน')}
+                  ? isEditMode
+                    ? 'กำลังบันทึก...'
+                    : 'กำลังสร้าง...'
+                  : isEditMode
+                    ? 'บันทึก'
+                    : 'สร้างงาน'}
               </button>
             </div>
           </Modal.Dialog>
@@ -449,7 +594,12 @@ const TaskModal = ({
 
 const TASK_MENU_ITEMS = [
   { id: 'edit', label: 'แก้ไข', icon: <Pencil size={13} /> },
-  { id: 'delete', label: 'ลบ', icon: <Trash2 size={13} />, variant: 'danger' as const },
+  {
+    id: 'delete',
+    label: 'ลบ',
+    icon: <Trash2 size={13} />,
+    variant: 'danger' as const,
+  },
 ];
 
 const TaskItem = ({
@@ -475,15 +625,23 @@ const TaskItem = ({
           className="mt-0.5 shrink-0 focus:outline-none"
           title="เลื่อนสถานะ"
         >
-          <span className={`size-2.5 rounded-full block transition-transform group-hover:scale-125 ${meta.dot}`} />
+          <span
+            className={`size-2.5 rounded-full block transition-transform group-hover:scale-125 ${meta.dot}`}
+          />
         </button>
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-gray-900 leading-snug block">{task.title}</span>
+          <span className="text-sm font-semibold text-gray-900 leading-snug block">
+            {task.title}
+          </span>
           {task.description && (
-            <span className="text-xs text-gray-500 block mt-0.5 line-clamp-2">{task.description}</span>
+            <span className="text-xs text-gray-500 block mt-0.5 line-clamp-2">
+              {task.description}
+            </span>
           )}
           <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-            <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${meta.badge}`}>
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${meta.badge}`}
+            >
               {meta.label}
             </span>
             {task.dueLabel && (
@@ -511,7 +669,6 @@ const TaskItem = ({
     </div>
   );
 };
-
 
 // ─── LandDetailPage ───────────────────────────────────────────────────────────
 
@@ -545,7 +702,16 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
     return (dbTasks ?? []).flatMap((t) => {
       const uiStatus = dbStatusToUi(t.status);
       if (!uiStatus) return [];
-      return [{ id: t.id, title: t.title, status: uiStatus, assigneeId: t.assigned_to, dueLabel: formatDueDate(t.due_date), description: t.description ?? undefined }];
+      return [
+        {
+          id: t.id,
+          title: t.title,
+          status: uiStatus,
+          assigneeId: t.assigned_to,
+          dueLabel: formatDueDate(t.due_date),
+          description: t.description ?? undefined,
+        },
+      ];
     });
   }, [dbTasks]);
 
@@ -559,28 +725,46 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
     if (filter !== 'all') result = result.filter((t) => t.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      result = result.filter((t) => t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q));
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          (t.description ?? '').toLowerCase().includes(q),
+      );
     }
     return result;
   }, [tasks, filter, search]);
 
-  const counts = useMemo(() => ({
-    all: tasks.length,
-    pending_confirmation: tasks.filter((t) => t.status === 'pending_confirmation').length,
-    in_progress: tasks.filter((t) => t.status === 'in_progress').length,
-    done: tasks.filter((t) => t.status === 'done').length,
-  }), [tasks]);
+  const counts = useMemo(
+    () => ({
+      all: tasks.length,
+      pending_confirmation: tasks.filter(
+        (t) => t.status === 'pending_confirmation',
+      ).length,
+      in_progress: tasks.filter((t) => t.status === 'in_progress').length,
+      done: tasks.filter((t) => t.status === 'done').length,
+    }),
+    [tasks],
+  );
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
-  const advanceStatus = useCallback((taskId: string) => {
-    const dbTask = dbTasks?.find((t) => t.id === taskId);
-    if (!dbTask) return;
-    updateStatus.mutate({ taskId, status: advanceDbStatus(dbTask.status), landId });
-  }, [dbTasks, updateStatus, landId]);
+  const advanceStatus = useCallback(
+    (taskId: string) => {
+      const dbTask = dbTasks?.find((t) => t.id === taskId);
+      if (!dbTask) return;
+      updateStatus.mutate({
+        taskId,
+        status: advanceDbStatus(dbTask.status),
+        landId,
+      });
+    },
+    [dbTasks, updateStatus, landId],
+  );
 
-  const { data: dbAutomatedJobs, isLoading: automatedJobsLoading } = useLandAutomatedJobsQuery(landId);
-  const { data: busyAutomatedDevices = [] } = useFarmBusyAutomatedDevicesQuery(farmId);
+  const { data: dbAutomatedJobs, isLoading: automatedJobsLoading } =
+    useLandAutomatedJobsQuery(landId);
+  const { data: busyAutomatedDevices = [] } =
+    useFarmBusyAutomatedDevicesQuery(farmId);
   const { data: dbDevices } = useDevicesQuery(farmId);
 
   const automatedDevices = useMemo(
@@ -589,44 +773,89 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
   );
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCreateAutomatedJobModalOpen, setIsCreateAutomatedJobModalOpen] = useState(false);
+  const [isCreateAutomatedJobModalOpen, setIsCreateAutomatedJobModalOpen] =
+    useState(false);
   const [editingTask, setEditingTask] = useState<TaskModalInitial | null>(null);
 
-  const handleCreate = useCallback((formData: TaskFormData) => {
-    createTask.mutate(
-      { title: formData.title, description: formData.description, farmId, landId, assignedTo: formData.assignedTo, dueDate: formData.dueDate },
-      { onSuccess: () => { setIsCreateModalOpen(false); setFilter('pending_confirmation'); } },
-    );
-  }, [createTask, farmId, landId]);
+  const handleCreate = useCallback(
+    (formData: TaskFormData) => {
+      createTask.mutate(
+        {
+          title: formData.title,
+          description: formData.description,
+          farmId,
+          landId,
+          assignedTo: formData.assignedTo,
+          dueDate: formData.dueDate,
+        },
+        {
+          onSuccess: () => {
+            setIsCreateModalOpen(false);
+            setFilter('pending_confirmation');
+          },
+        },
+      );
+    },
+    [createTask, farmId, landId],
+  );
 
-  const handleEdit = useCallback((taskId: string) => {
-    const dbTask = dbTasks?.find((t) => t.id === taskId);
-    if (!dbTask) return;
-    setEditingTask({
-      id: dbTask.id,
-      title: dbTask.title,
-      description: dbTask.description,
-      dueDate: dbTask.due_date,
-      assignedTo: dbTask.assigned_to,
-    });
-  }, [dbTasks]);
+  const handleEdit = useCallback(
+    (taskId: string) => {
+      const dbTask = dbTasks?.find((t) => t.id === taskId);
+      if (!dbTask) return;
+      setEditingTask({
+        id: dbTask.id,
+        title: dbTask.title,
+        description: dbTask.description,
+        dueDate: dbTask.due_date,
+        assignedTo: dbTask.assigned_to,
+      });
+    },
+    [dbTasks],
+  );
 
-  const handleEditSubmit = useCallback((data: TaskFormData) => {
-    if (!editingTask) return;
-    updateTask.mutate(
-      { input: { taskId: editingTask.id, title: data.title, description: data.description ?? null, dueDate: data.dueDate, assignedTo: data.assignedTo }, landId, farmId },
-      { onSuccess: () => setEditingTask(null) },
-    );
-  }, [updateTask, editingTask, landId, farmId]);
+  const handleEditSubmit = useCallback(
+    (data: TaskFormData) => {
+      if (!editingTask) return;
+      updateTask.mutate(
+        {
+          input: {
+            taskId: editingTask.id,
+            title: data.title,
+            description: data.description ?? null,
+            dueDate: data.dueDate,
+            assignedTo: data.assignedTo,
+          },
+          landId,
+          farmId,
+        },
+        { onSuccess: () => setEditingTask(null) },
+      );
+    },
+    [updateTask, editingTask, landId, farmId],
+  );
 
-  const handleDelete = useCallback((taskId: string) => {
-    deleteTask.mutate({ taskId, landId, farmId });
-  }, [deleteTask, landId, farmId]);
+  const handleDelete = useCallback(
+    (taskId: string) => {
+      deleteTask.mutate({ taskId, landId, farmId });
+    },
+    [deleteTask, landId, farmId],
+  );
 
-  const mapImageUrl = useMemo(() => buildPolygonMapUrl(land.coords, land.color ?? '#22c55e'), [land.coords, land.color]);
+  const mapImageUrl = useMemo(
+    () => buildPolygonMapUrl(land.coords, land.color ?? '#22c55e'),
+    [land.coords, land.color],
+  );
+  const landAreaMetrics = useMemo(
+    () => getLandAreaMetrics(land.coords),
+    [land.coords],
+  );
 
   const vehicles = useMemo(
-    () => (dbAutomatedJobs ?? []).map((job) => automatedJobToVehicleData(job, land.name)),
+    () =>
+      (dbAutomatedJobs ?? []).map((job) =>
+        automatedJobToVehicleData(job, land.name),
+      ),
     [dbAutomatedJobs, land.name],
   );
 
@@ -652,7 +881,12 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
       setVehicleOverlayActive(false);
       setSelectedVehicleMapId(null);
     };
-  }, [activeTab, setDevicePopup, setVehicleOverlayActive, setSelectedVehicleMapId]);
+  }, [
+    activeTab,
+    setDevicePopup,
+    setVehicleOverlayActive,
+    setSelectedVehicleMapId,
+  ]);
 
   const handleSelectVehicle = useCallback(
     (vehicle: VehicleData) => {
@@ -661,11 +895,19 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
         if (vehicle.workPath.length >= 2) {
           zoomToPath(mapInstance, vehicle.workPath);
         } else {
-          mapInstance.flyTo({ center: [vehicle.lng, vehicle.lat], zoom: 17, duration: 800 });
+          mapInstance.flyTo({
+            center: [vehicle.lng, vehicle.lat],
+            zoom: 17,
+            duration: 800,
+          });
         }
       }
       vehiclePopupLiveLngLatRef.current = [vehicle.lng, vehicle.lat];
-      setDevicePopup({ type: 'vehicle', lngLat: [vehicle.lng, vehicle.lat], vehicle });
+      setDevicePopup({
+        type: 'vehicle',
+        lngLat: [vehicle.lng, vehicle.lat],
+        vehicle,
+      });
     },
     [mapInstance, setDevicePopup, setSelectedVehicleMapId],
   );
@@ -701,18 +943,29 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
         },
       );
     },
-    [createAutomatedJob, farmId, landId, land.name, automatedDevices, handleSelectVehicle],
+    [
+      createAutomatedJob,
+      farmId,
+      landId,
+      land.name,
+      automatedDevices,
+      handleSelectVehicle,
+    ],
   );
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Column className="flex flex-col flex-1 min-h-0 max-h-[calc(90vh)] overflow-hidden">
-
       {/* ── Navigation header ── */}
       <div className="px-2 pt-3 pb-0 shrink-0">
         <Row className="items-center">
-          <Button variant="ghost" size="sm" className="gap-0.5 text-[#007AFF] px-2" onPress={onBack}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-0.5 text-[#007AFF] px-2"
+            onPress={onBack}
+          >
             <ChevronLeft size={20} strokeWidth={2.5} />
             <span className="text-[15px]">{'กลับ'}</span>
           </Button>
@@ -726,20 +979,51 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
       {/* ── Satellite banner ── */}
       {mapImageUrl && (
         <div className="mx-3 mt-2 shrink-0 relative h-[110px] rounded-2xl overflow-hidden">
-          <img src={mapImageUrl} alt={land.name} className="w-full h-full object-cover" loading="eager" />
+          <img
+            src={mapImageUrl}
+            alt={land.name}
+            className="w-full h-full object-cover"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent" />
           <div className="absolute bottom-2.5 left-3 right-3 flex items-end justify-between">
             <div>
-              <p className="text-white font-bold text-sm drop-shadow">{land.name}</p>
+              <p className="text-white font-bold text-sm drop-shadow">
+                {land.name}
+              </p>
               {land.type && (
-                <span className="inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: `${land.color ?? '#22c55e'}55`, color: '#fff' }}>
+                <span
+                  className="inline-block mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{
+                    background: `${land.color ?? '#22c55e'}55`,
+                    color: '#fff',
+                  }}
+                >
                   {land.type}
                 </span>
               )}
             </div>
-            <span className="text-white/70 text-[10px]">{counts.all} งาน</span>
+            <div className="text-right">
+              {landAreaMetrics && (
+                <p className="text-white/90 text-[10px] font-medium">
+                  {landAreaMetrics.areaLabel}
+                </p>
+              )}
+              <span className="text-white/70 text-[10px]">{counts.all} งาน</span>
+            </div>
           </div>
+        </div>
+      )}
+
+      {landAreaMetrics && (
+        <div className="mx-3 mt-2 shrink-0 rounded-2xl bg-emerald-50/80 border border-emerald-100 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+            Carbon Credit
+          </p>
+          <p className="mt-1 text-sm font-semibold text-emerald-950">
+            {landAreaMetrics.carbonCreditTco2e.toFixed(2)} tCO2e
+          </p>
+      
         </div>
       )}
 
@@ -762,10 +1046,15 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
             </Tabs.List>
           </Tabs.ListContainer>
 
-          <Tabs.Panel id="tasks" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2">
+          <Tabs.Panel
+            id="tasks"
+            className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2"
+          >
             {/* ── Stats row ── */}
             <div className="shrink-0 grid grid-cols-3 gap-2">
-              {(['pending_confirmation', 'in_progress', 'done'] as TaskStatus[]).map((s) => {
+              {(
+                ['pending_confirmation', 'in_progress', 'done'] as TaskStatus[]
+              ).map((s) => {
                 const m = STATUS_META[s];
                 const active = filter === s;
                 return (
@@ -774,8 +1063,16 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
                     onClick={() => setFilter(active ? 'all' : s)}
                     className={`flex flex-col items-center rounded-xl py-2 px-1 transition-colors cursor-pointer ${active ? 'bg-gray-900' : 'bg-black/5 hover:bg-black/8'}`}
                   >
-                    <span className={`text-lg font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}>{counts[s]}</span>
-                    <span className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}>{m.label}</span>
+                    <span
+                      className={`text-lg font-bold leading-none ${active ? 'text-white' : 'text-gray-800'}`}
+                    >
+                      {counts[s]}
+                    </span>
+                    <span
+                      className={`text-[9px] mt-0.5 font-medium leading-tight text-center ${active ? 'text-white/80' : 'text-gray-500'}`}
+                    >
+                      {m.label}
+                    </span>
                   </button>
                 );
               })}
@@ -799,7 +1096,9 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
             {/* ── Task list ── */}
             <div className="flex-1 min-h-0 overflow-y-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {tasksLoading ? (
-                <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงาน…</div>
+                <div className="py-8 text-center text-sm text-gray-400">
+                  กำลังโหลดงาน…
+                </div>
               ) : filteredTasks.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-400">
                   {search ? 'ไม่พบงานที่ค้นหา' : 'ยังไม่มีงาน'}
@@ -814,7 +1113,9 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                     />
-                    {i < filteredTasks.length - 1 && <Separator className="my-0.5" />}
+                    {i < filteredTasks.length - 1 && (
+                      <Separator className="my-0.5" />
+                    )}
                   </div>
                 ))
               )}
@@ -833,7 +1134,10 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
             </div>
           </Tabs.Panel>
 
-          <Tabs.Panel id="vehicles" className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2">
+          <Tabs.Panel
+            id="vehicles"
+            className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden pt-2"
+          >
             <div className="shrink-0">
               <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
                 <SearchIcon size={14} className="text-gray-400 shrink-0" />
@@ -848,7 +1152,9 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
 
             <div className="flex-1 min-h-0 overflow-y-auto mt-2 gap-1 camera-list-scroll">
               {automatedJobsLoading ? (
-                <div className="py-8 text-center text-sm text-gray-400">กำลังโหลดงานอัตโนมัติ…</div>
+                <div className="py-8 text-center text-sm text-gray-400">
+                  กำลังโหลดงานอัตโนมัติ…
+                </div>
               ) : (
                 <>
                   {filteredVehicles.map((vehicle) => {
@@ -859,31 +1165,49 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
                         key={vehicle.id}
                         onClick={() => handleSelectVehicle(vehicle)}
                         className={`items-center rounded-xl p-2.5 transition-colors cursor-pointer shrink-0 ${
-                          isSelected ? `${meta.listSelectedBg} ring-1 ${meta.listSelectedRing}` : 'hover:bg-black/5'
+                          isSelected
+                            ? `${meta.listSelectedBg} ring-1 ${meta.listSelectedRing}`
+                            : 'hover:bg-black/5'
                         }`}
                       >
-                        <div className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border relative ${meta.listBg} ${meta.listBorder}`}>
-                          <VehicleTypeIcon type={vehicle.type} size={16} className={meta.listIcon} />
+                        <div
+                          className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border relative ${meta.listBg} ${meta.listBorder}`}
+                        >
+                          <VehicleTypeIcon
+                            type={vehicle.type}
+                            size={16}
+                            className={meta.listIcon}
+                          />
                           {vehicle.status === 'working' && (
                             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white animate-pulse" />
                           )}
                         </div>
                         <Column className="ml-2.5 min-w-0">
-                          <span className="font-medium text-sm truncate">{vehicle.jobTitle}</span>
-                          <Chip className={`w-fit mt-0.5 ${VEHICLE_STATUS_CHIP[vehicle.status]}`}>
+                          <span className="font-medium text-sm truncate">
+                            {vehicle.jobTitle}
+                          </span>
+                          <Chip
+                            className={`w-fit mt-0.5 ${VEHICLE_STATUS_CHIP[vehicle.status]}`}
+                          >
                             <Chip.Label className="text-[11px]">
-                              {VEHICLE_STATUS_LABEL[vehicle.status]} · <JobProgressPercent vehicle={vehicle} />
+                              {VEHICLE_STATUS_LABEL[vehicle.status]} ·{' '}
+                              <JobProgressPercent vehicle={vehicle} />
                             </Chip.Label>
                           </Chip>
                         </Column>
-                        <ChevronRight size={14} className="text-gray-300 ml-auto shrink-0" />
+                        <ChevronRight
+                          size={14}
+                          className="text-gray-300 ml-auto shrink-0"
+                        />
                       </Row>
                     );
                   })}
 
                   {filteredVehicles.length === 0 && (
                     <span className="text-center text-gray-400 py-8 text-sm block">
-                      {search.trim() ? 'ไม่พบงานอัตโนมัติที่ค้นหา' : 'ยังไม่มีงานอัตโนมัติในแปลงนี้'}
+                      {search.trim()
+                        ? 'ไม่พบงานอัตโนมัติที่ค้นหา'
+                        : 'ยังไม่มีงานอัตโนมัติในแปลงนี้'}
                     </span>
                   )}
                 </>
@@ -926,7 +1250,9 @@ export const LandDetailPage = ({ land, farmId, farmName, onBack }: Props) => {
 
       <TaskModal
         isOpen={!!editingTask}
-        onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+        onOpenChange={(open) => {
+          if (!open) setEditingTask(null);
+        }}
         membersData={membersData}
         landName={land.name}
         initialValues={editingTask ?? undefined}
