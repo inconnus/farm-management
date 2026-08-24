@@ -19,6 +19,7 @@ import { SensorPopup } from './SensorPopup';
 import { SolarCellPopup } from './SolarCellPopup';
 import { VehicleMapMarkerOverlay } from './VehicleMapMarkerOverlay';
 import { VehiclePopup } from './VehiclePopup';
+import { WaterLevelPopup } from './WaterLevelPopup';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -205,6 +206,9 @@ const MapView = () => {
           )}
           {devicePopup.type === 'sensor' && devicePopup.sensor && (
             <SensorPopup sensor={devicePopup.sensor} />
+          )}
+          {devicePopup.type === 'water_level' && devicePopup.waterLevel && (
+            <WaterLevelPopup device={devicePopup.waterLevel} />
           )}
           {devicePopup.type === 'vehicle' && devicePopup.vehicle && (
             <VehiclePopup vehicle={devicePopup.vehicle} />

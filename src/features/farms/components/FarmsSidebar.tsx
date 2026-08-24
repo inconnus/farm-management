@@ -5,7 +5,6 @@ import { useDevicesQuery } from '@features/devices/hooks/useDevicesQuery';
 import {
   type CameraData,
   CameraMarker,
-  FarmMarker,
   type LightData,
   LightMarker,
   PolygonMarker,
@@ -17,7 +16,11 @@ import {
   toLightData,
   toSensorData,
   toSolarCellData,
+  toWaterLevelData,
+  type WaterLevelData,
+  WaterLevelMarker,
 } from '@features/map/components';
+import { FarmClustersMount } from '@features/map/components/FarmClustersMount';
 import { MapPolygonDrawMount } from '@features/map/components/MapPolygonDrawMount';
 import { TaskLabel } from '@features/map/components/TaskLabel';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
@@ -145,6 +148,13 @@ export const FarmsSidebar = () => {
       [],
     [dbDevices],
   );
+  const waterLevels = useMemo<WaterLevelData[]>(
+    () =>
+      dbDevices
+        ?.filter((d) => d.device_type === 'water_level')
+        .map(toWaterLevelData) ?? [],
+    [dbDevices],
+  );
   const sensorAppIotIds = useMemo(
     () => sensors.map((s) => s.appIotId).filter(Boolean),
     [sensors],
@@ -162,6 +172,15 @@ export const FarmsSidebar = () => {
 
   const { data: dbFarms = [], isLoading } = useFarmsQuery();
   const farms = useMemo(() => dbFarms.map(toFarm), [dbFarms]);
+
+  const farmClusterPoints = useMemo(
+    () =>
+      farms.map((farm) => {
+        const { lat, lng } = getCentroid(farm);
+        return { id: farm.id, name: farm.name, lat, lng };
+      }),
+    [farms],
+  );
 
   const filteredFarms = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -390,34 +409,21 @@ export const FarmsSidebar = () => {
         </>
       )}
 
-      {!farmId &&
-        farms.map((farm) => {
-          const { lat, lng } = getCentroid(farm);
-          return (
-            <FarmMarker
-              key={farm.id}
-              farm={{
-                id: farm.id,
-                name: farm.name,
-                image: farm.image,
-                lands: farm.lands,
-                lat,
-                lng,
-              }}
-              onClick={() => {
-                if (farm) {
-                  selectFarm({
-                    id: farm.id,
-                    name: farm.name,
-                    province: farm.province,
-                  });
-                  if (mapInstance) zoomToFarm(mapInstance, farm);
-                }
-                navigate(`${basePath}/${farm.id}`);
-              }}
-            />
-          );
-        })}
+      <FarmClustersMount
+        points={farmClusterPoints}
+        visible={!farmId}
+        onFarmClick={(id) => {
+          const farm = farms.find((f) => f.id === id);
+          if (!farm) return;
+          selectFarm({
+            id: farm.id,
+            name: farm.name,
+            province: farm.province,
+          });
+          if (mapInstance) zoomToFarm(mapInstance, farm);
+          navigate(`${basePath}/${farm.id}`);
+        }}
+      />
       {farmId &&
         cameras.map((c) => (
           <CameraMarker
@@ -471,6 +477,20 @@ export const FarmsSidebar = () => {
                 type: 'sensor',
                 lngLat: [sensor.lng, sensor.lat],
                 sensor,
+              })
+            }
+          />
+        ))}
+      {farmId &&
+        waterLevels.map((wl) => (
+          <WaterLevelMarker
+            key={wl.id}
+            device={wl}
+            onClick={(d) =>
+              setDevicePopup({
+                type: 'water_level',
+                lngLat: [d.lng, d.lat],
+                waterLevel: d,
               })
             }
           />

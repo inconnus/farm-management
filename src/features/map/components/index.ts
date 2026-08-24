@@ -13,6 +13,8 @@ export {
   toCameraData,
 } from './CameraMarker';
 export { CameraPopup } from './CameraPopup';
+export type { FarmClusterPoint } from './FarmClustersMount';
+export { FarmClustersMount } from './FarmClustersMount';
 export type { FarmMarkerData } from './FarmMarker';
 export { FarmMarker, FarmMarkerFace } from './FarmMarker';
 export {
@@ -50,4 +52,11 @@ export {
 export { SolarCellPopup } from './SolarCellPopup';
 export { VehicleMarker, VehicleMarkerFace } from './VehicleMarker';
 export { VehiclePopup } from './VehiclePopup';
+export type { WaterLevelData } from './WaterLevelMarker';
+export {
+  toWaterLevelData,
+  WaterLevelMarker,
+  WaterLevelMarkerFace,
+} from './WaterLevelMarker';
+export { WaterLevelPopup } from './WaterLevelPopup';
 export { default as WeatherWidget } from './WeatherWidget';

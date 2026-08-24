@@ -4,6 +4,7 @@ import type { CameraData } from '../components/CameraMarker';
 import type { LightData } from '../components/LightMarker';
 import type { SensorData } from '../components/SensorMarker';
 import type { SolarCellData } from '../components/SolarCellMarker';
+import type { WaterLevelData } from '../components/WaterLevelMarker';
 
 export type DevicePopupState =
   | {
@@ -25,6 +26,11 @@ export type DevicePopupState =
       type: 'sensor';
       lngLat: [number, number];
       sensor: SensorData;
+    }
+  | {
+      type: 'water_level';
+      lngLat: [number, number];
+      waterLevel: WaterLevelData;
     }
   | {
       type: 'vehicle';

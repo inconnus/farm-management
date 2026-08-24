@@ -11,6 +11,8 @@ import {
   toLightData,
   toSensorData,
   toSolarCellData,
+  toWaterLevelData,
+  type WaterLevelData,
 } from '@features/map/components';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
 import {
@@ -50,6 +52,7 @@ import {
   SunIcon,
   Trash2,
   UserRound,
+  WavesIcon,
 } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -461,6 +464,13 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
       [],
     [dbDevices],
   );
+  const waterLevels = useMemo<WaterLevelData[]>(
+    () =>
+      dbDevices
+        ?.filter((d) => d.device_type === 'water_level')
+        .map(toWaterLevelData) ?? [],
+    [dbDevices],
+  );
   const sensorAppIotIds = useMemo(
     () => sensors.map((s) => s.appIotId).filter(Boolean),
     [sensors],
@@ -519,6 +529,12 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
         (s.province ?? '').toLowerCase().includes(q),
     );
   }, [sensors, search]);
+
+  const filteredWaterLevels = useMemo(() => {
+    if (!search.trim()) return waterLevels;
+    const q = search.trim().toLowerCase();
+    return waterLevels.filter((w) => w.name.toLowerCase().includes(q));
+  }, [waterLevels, search]);
 
   // ─── Land navigation ──────────────────────────────────────────────────────
 
@@ -783,6 +799,52 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
                 </Row>
               ))}
 
+              {filteredWaterLevels.map((wl) => (
+                <Row
+                  key={wl.id}
+                  onClick={() => {
+                    if (mapInstance)
+                      mapInstance.flyTo({
+                        center: [wl.lng, wl.lat],
+                        zoom: 17,
+                        duration: 800,
+                      });
+                    setDevicePopup({
+                      type: 'water_level',
+                      lngLat: [wl.lng, wl.lat],
+                      waterLevel: wl,
+                    });
+                  }}
+                  className="items-center rounded-xl p-2.5 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+                >
+                  <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center bg-sky-50 border border-sky-200">
+                    <WavesIcon size={16} className="text-sky-600" />
+                  </div>
+                  <Column className="ml-2.5 min-w-0">
+                    <span className="font-medium text-sm truncate">
+                      {wl.name}
+                    </span>
+                    <Chip className="w-fit mt-0.5 bg-sky-50">
+                      <Chip.Label className="text-[11px] text-sky-700">
+                        วัดระดับน้ำ · สูงสุด {wl.maxDepthCm} {wl.unit}
+                      </Chip.Label>
+                    </Chip>
+                  </Column>
+                  <div
+                    className="ml-auto flex items-center gap-1 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu
+                      items={DEVICE_MENU_ITEMS}
+                      onAction={(action) => {
+                        if (action === 'delete') deleteDevice.mutate(wl.id);
+                      }}
+                    />
+                    <ChevronRight size={14} className="text-gray-300" />
+                  </div>
+                </Row>
+              ))}
+
               {filteredLights.map((light) => (
                 <Row
                   key={light.id}
@@ -901,6 +963,7 @@ export const FarmDetailPage = ({ farm, nav, onBack }: Props) => {
 
               {filteredCameras.length === 0 &&
                 filteredSolarCells.length === 0 &&
+                filteredWaterLevels.length === 0 &&
                 filteredLights.length === 0 &&
                 filteredSensors.length === 0 && (
                   <span className="text-center text-gray-400 py-4 text-sm">

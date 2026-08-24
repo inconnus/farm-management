@@ -52,10 +52,10 @@ export const FarmListPage = ({
           </span>
         </div>
 
-        <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9">
+        <Row className="items-center gap-2 bg-black/6 rounded-[10px] px-3 h-9 shrink-0">
           <SearchIcon size={14} className="text-gray-400 shrink-0" />
           <input
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 "
             placeholder="ค้นหา"
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}

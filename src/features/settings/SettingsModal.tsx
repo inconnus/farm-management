@@ -1,18 +1,30 @@
-import { SensorApiPanel } from '@features/settings/SensorApiPanel';
-import { Avatar, Modal, Separator } from '@heroui/react';
+import { addOrgMemberByEmail, type InviteOrgRole } from '@features/auth/orgApi';
+import {
+  Avatar,
+  Button,
+  Label,
+  ListBox,
+  Modal,
+  Select,
+  Separator,
+} from '@heroui/react';
 import { supabase } from '@shared/lib/supabase/client';
 import type { Enums, Tables } from '@shared/lib/supabase/database.types';
 import {
   CrownIcon,
   EyeIcon,
   MailIcon,
+  MapPinnedIcon,
   RadioIcon,
   ShieldCheckIcon,
   Trash2Icon,
   UserIcon,
   UsersIcon,
+  XIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { MemberFarmAccessPanel } from './MemberFarmAccessPanel';
+import { SensorApiPanel } from './SensorApiPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +41,8 @@ type MemberWithProfile = {
 type TeamWithMembers = Tables<'teams'> & { memberCount: number };
 
 type SettingKey = 'members' | 'teams' | 'sensor-api';
+
+const INVITE_ROLES: InviteOrgRole[] = ['member', 'admin', 'viewer'];
 
 // ─── Sidebar nav definition ───────────────────────────────────────────────────
 
@@ -94,6 +108,23 @@ const ROLE_BADGE: Record<OrgMemberRole, string> = {
   viewer: 'bg-purple-50 text-purple-700 border-purple-200',
 };
 
+function inviteErrorMessage(error: unknown): string {
+  const message =
+    error && typeof error === 'object' && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : error instanceof Error
+        ? error.message
+        : String(error);
+  if (message.includes('ไม่พบบัญชี'))
+    return 'ไม่พบบัญชีที่ใช้อีเมลนี้ กรุณาให้ผู้ใช้สมัครก่อน';
+  if (message.includes('อยู่ในองค์กรแล้ว')) return 'ผู้ใช้นี้อยู่ในองค์กรแล้ว';
+  if (message.includes('ไม่มีสิทธิ์')) return 'ไม่มีสิทธิ์เชิญสมาชิก';
+  if (message.includes('อีเมลไม่ถูกต้อง')) return 'อีเมลไม่ถูกต้อง';
+  if (message.includes('บทบาทเจ้าของ'))
+    return 'ไม่สามารถมอบบทบาทเจ้าของผ่านการเชิญ';
+  return message || 'เชิญสมาชิกไม่สำเร็จ';
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type SettingsModalProps = {
@@ -121,60 +152,56 @@ export const SettingsModal = ({
 
   const canManage = currentUserRole === 'owner' || currentUserRole === 'admin';
 
-  // ── Fetch members ───────────────────────────────────────────────────────────
+  const fetchMembers = useCallback(async () => {
+    if (!orgId) return;
+    setIsLoadingMembers(true);
+    try {
+      const { data: memberRows, error } = await supabase
+        .from('organization_members')
+        .select('id, user_id, role, joined_at')
+        .eq('organization_id', orgId)
+        .order('joined_at', { ascending: true });
+
+      if (error) throw error;
+
+      const userIds = memberRows?.map((r) => r.user_id) ?? [];
+      let profileMap: Record<
+        string,
+        Pick<Tables<'profiles'>, 'full_name' | 'avatar_url'>
+      > = {};
+
+      if (userIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
+
+        profileMap = Object.fromEntries(
+          (profileRows ?? []).map((p) => [
+            p.id,
+            { full_name: p.full_name, avatar_url: p.avatar_url },
+          ]),
+        );
+      }
+
+      setMembers(
+        (memberRows ?? []).map((m) => ({
+          id: m.id,
+          user_id: m.user_id,
+          role: m.role,
+          joined_at: m.joined_at,
+          profile: profileMap[m.user_id] ?? null,
+        })),
+      );
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  }, [orgId]);
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
-
-    const fetchMembers = async () => {
-      setIsLoadingMembers(true);
-      try {
-        const { data: memberRows, error } = await supabase
-          .from('organization_members')
-          .select('id, user_id, role, joined_at')
-          .eq('organization_id', orgId)
-          .order('joined_at', { ascending: true });
-
-        if (error) throw error;
-
-        const userIds = memberRows?.map((r) => r.user_id) ?? [];
-        let profileMap: Record<
-          string,
-          Pick<Tables<'profiles'>, 'full_name' | 'avatar_url'>
-        > = {};
-
-        if (userIds.length > 0) {
-          const { data: profileRows } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', userIds);
-
-          profileMap = Object.fromEntries(
-            (profileRows ?? []).map((p) => [
-              p.id,
-              { full_name: p.full_name, avatar_url: p.avatar_url },
-            ]),
-          );
-        }
-
-        setMembers(
-          (memberRows ?? []).map((m) => ({
-            id: m.id,
-            user_id: m.user_id,
-            role: m.role,
-            joined_at: m.joined_at,
-            profile: profileMap[m.user_id] ?? null,
-          })),
-        );
-      } finally {
-        setIsLoadingMembers(false);
-      }
-    };
-
-    fetchMembers();
-  }, [isOpen, orgId]);
-
-  // ── Fetch teams ─────────────────────────────────────────────────────────────
+    void fetchMembers();
+  }, [isOpen, orgId, fetchMembers]);
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
@@ -223,10 +250,8 @@ export const SettingsModal = ({
       }
     };
 
-    fetchTeams();
+    void fetchTeams();
   }, [isOpen, orgId]);
-
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <Modal>
@@ -236,7 +261,6 @@ export const SettingsModal = ({
             <Modal.CloseTrigger className="hover:bg-gray-100 z-10" />
 
             <div className="flex h-[540px]">
-              {/* ── Left Sidebar ────────────────────────────────────────── */}
               <aside className="w-52 shrink-0 flex flex-col gap-1 border-r border-gray-100 bg-gray-50/60 px-3 py-5">
                 <span className="px-2 pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 select-none">
                   ตั้งค่า
@@ -274,14 +298,15 @@ export const SettingsModal = ({
                 ))}
               </aside>
 
-              {/* ── Right Content ────────────────────────────────────────── */}
               <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {activeKey === 'members' && (
                   <MembersPanel
+                    orgId={orgId}
                     members={members}
                     isLoading={isLoadingMembers}
                     canManage={canManage}
                     currentUserId={currentUserId}
+                    onMembersChanged={fetchMembers}
                   />
                 )}
                 {activeKey === 'teams' && (
@@ -302,50 +327,245 @@ export const SettingsModal = ({
 // ─── Members Panel ────────────────────────────────────────────────────────────
 
 const MembersPanel = ({
+  orgId,
   members,
   isLoading,
   canManage,
   currentUserId,
+  onMembersChanged,
 }: {
+  orgId: string | null;
   members: MemberWithProfile[];
   isLoading: boolean;
   canManage: boolean;
   currentUserId: string | null;
-}) => (
-  <>
-    <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-      <div>
-        <h2 className="text-base font-semibold text-gray-800">สมาชิก</h2>
-        <p className="text-xs text-gray-400 mt-0.5">
-          {isLoading ? '...' : `${members.length} คนในองค์กร`}
-        </p>
+  onMembersChanged: () => Promise<void>;
+}) => {
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<InviteOrgRole>('member');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [farmAccessMember, setFarmAccessMember] =
+    useState<MemberWithProfile | null>(null);
+
+  const resetInviteForm = () => {
+    setEmail('');
+    setRole('member');
+    setError(null);
+    setSuccess(null);
+    setIsSubmitting(false);
+  };
+
+  const handleOpenInvite = () => {
+    resetInviteForm();
+    setIsInviteOpen(true);
+  };
+
+  const handleCloseInvite = () => {
+    if (isSubmitting) return;
+    setIsInviteOpen(false);
+    resetInviteForm();
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orgId) return;
+
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) {
+      setError('อีเมลไม่ถูกต้อง');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await addOrgMemberByEmail({
+        organizationId: orgId,
+        email: trimmed,
+        role,
+      });
+      await onMembersChanged();
+      setSuccess(`เพิ่ม ${trimmed} เป็น${ROLE_LABEL[role]} แล้ว`);
+      setEmail('');
+      setRole('member');
+    } catch (err) {
+      setError(inviteErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const farmAccessDisplayName =
+    farmAccessMember?.profile?.full_name ?? 'ผู้ใช้';
+
+  return (
+    <>
+      <div className="relative flex flex-col flex-1 min-h-0">
+      {farmAccessMember && orgId && (
+        <MemberFarmAccessPanel
+          orgId={orgId}
+          userId={farmAccessMember.user_id}
+          displayName={farmAccessDisplayName}
+          onClose={() => setFarmAccessMember(null)}
+        />
+      )}
+
+      <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
+        <div>
+          <h2 className="text-base font-semibold text-gray-800">สมาชิก</h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {isLoading ? '...' : `${members.length} คนในองค์กร`}
+          </p>
+        </div>
+        {canManage && (
+          <button
+            type="button"
+            onClick={handleOpenInvite}
+            className="flex items-center gap-1.5 rounded-xl border border-[#03662c]/30 bg-[#03662c]/5 px-3 py-1.5 text-xs font-medium text-[#03662c] hover:bg-[#03662c]/10 transition-colors"
+          >
+            <MailIcon className="size-3.5" />
+            เชิญสมาชิก
+          </button>
+        )}
       </div>
-      {canManage && (
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-xl border border-[#03662c]/30 bg-[#03662c]/5 px-3 py-1.5 text-xs font-medium text-[#03662c] hover:bg-[#03662c]/10 transition-colors"
+
+      {isInviteOpen && (
+        <form
+          onSubmit={handleInvite}
+          className="shrink-0 border-b border-gray-100 bg-[#03662c]/3 px-6 py-4 flex flex-col gap-3"
         >
-          <MailIcon className="size-3.5" />
-          เชิญสมาชิก
-        </button>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-gray-800">
+              เพิ่มสมาชิกด้วยอีเมล
+            </span>
+            <button
+              type="button"
+              onClick={handleCloseInvite}
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="ปิดฟอร์มเชิญ"
+            >
+              <XIcon className="size-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            ผู้ใช้ต้องมีบัญชีในระบบแล้ว — จะถูกเพิ่มเข้าองค์กรทันทีโดยไม่ต้องยืนยันอีกฝั่ง
+            {role === 'member' || role === 'viewer'
+              ? ' · สมาชิก/ผู้ชมจะยังไม่เห็นฟาร์มจนกว่าจะตั้งค่าให้'
+              : ''}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex-1 min-w-0">
+              <Label className="text-xs text-gray-500 mb-1 block">อีเมล</Label>
+              <input
+                type="email"
+                required
+                autoFocus
+                value={email}
+                onChange={(ev) => setEmail(ev.target.value)}
+                placeholder="user@example.com"
+                className="w-full h-9 rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-[#03662c]/50 focus:ring-2 focus:ring-[#03662c]/15"
+              />
+            </div>
+
+            <div className="w-full sm:w-44">
+              <Label className="text-xs text-gray-500 mb-1 block">บทบาท</Label>
+              <Select
+                className="w-full"
+                value={role}
+                onChange={(key) => {
+                  if (
+                    typeof key === 'string' &&
+                    INVITE_ROLES.includes(key as InviteOrgRole)
+                  ) {
+                    setRole(key as InviteOrgRole);
+                  }
+                }}
+                aria-label="บทบาทสมาชิก"
+              >
+                <Select.Trigger className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-sm">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    {INVITE_ROLES.map((r) => (
+                      <ListBox.Item key={r} id={r} textValue={ROLE_LABEL[r]}>
+                        <div className="flex items-center gap-2">
+                          {ROLE_ICON[r]}
+                          {ROLE_LABEL[r]}
+                        </div>
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+          {success && (
+            <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+              {success}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onPress={handleCloseInvite}
+              isDisabled={isSubmitting}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-[#03662c] text-white"
+              isDisabled={isSubmitting || !email.trim()}
+            >
+              {isSubmitting ? 'กำลังเพิ่ม...' : 'ยืนยัน'}
+            </Button>
+          </div>
+        </form>
       )}
-    </div>
-    <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2">
-      {isLoading ? (
-        <RowSkeleton />
-      ) : (
-        members.map((member) => (
-          <MemberRow
-            key={member.id}
-            member={member}
-            isCurrentUser={member.user_id === currentUserId}
-            canManage={canManage && member.role !== 'owner'}
-          />
-        ))
-      )}
-    </div>
-  </>
-);
+
+      <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2">
+        {isLoading ? (
+          <RowSkeleton />
+        ) : (
+          members.map((member) => (
+            <MemberRow
+              key={member.id}
+              member={member}
+              isCurrentUser={member.user_id === currentUserId}
+              canManage={canManage && member.role !== 'owner'}
+              onEditFarmAccess={
+                canManage &&
+                (member.role === 'member' || member.role === 'viewer')
+                  ? () => setFarmAccessMember(member)
+                  : undefined
+              }
+            />
+          ))
+        )}
+      </div>
+      </div>
+    </>
+  );
+};
 
 // ─── Teams Panel ──────────────────────────────────────────────────────────────
 
@@ -386,10 +606,12 @@ const MemberRow = ({
   member,
   isCurrentUser,
   canManage,
+  onEditFarmAccess,
 }: {
   member: MemberWithProfile;
   isCurrentUser: boolean;
   canManage: boolean;
+  onEditFarmAccess?: () => void;
 }) => {
   const displayName = member.profile?.full_name ?? 'ผู้ใช้';
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -430,6 +652,17 @@ const MemberRow = ({
         {ROLE_ICON[member.role]}
         {ROLE_LABEL[member.role]}
       </div>
+
+      {onEditFarmAccess && (
+        <button
+          type="button"
+          onClick={onEditFarmAccess}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-[#03662c] hover:bg-[#03662c]/10 transition-colors"
+          title="ตั้งค่าฟาร์มที่มองเห็นได้"
+        >
+          <MapPinnedIcon className="size-3.5" />
+        </button>
+      )}
 
       {canManage && (
         <button

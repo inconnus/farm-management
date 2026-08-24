@@ -1,4 +1,4 @@
-﻿xport type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -242,6 +242,8 @@ export type Database = {
       }
       farms: {
         Row: {
+          app_farm_id: string | null
+          app_farmer_id: string | null
           area_unit: string
           country: string | null
           created_at: string
@@ -259,6 +261,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          app_farm_id?: string | null
+          app_farmer_id?: string | null
           area_unit?: string
           country?: string | null
           created_at?: string
@@ -276,6 +280,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          app_farm_id?: string | null
+          app_farmer_id?: string | null
           area_unit?: string
           country?: string | null
           created_at?: string
@@ -674,6 +680,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_org_member_by_email: {
+        Args: {
+          p_email: string
+          p_org_id: string
+          p_role?: Database["public"]["Enums"]["org_member_role"]
+        }
+        Returns: string
+      }
+      can_access_farm: { Args: { p_farm_id: string }; Returns: boolean }
       get_my_farm_ids: { Args: never; Returns: string[] }
       get_my_org_ids: { Args: never; Returns: string[] }
       haversine_km: {
@@ -682,6 +697,14 @@ export type Database = {
       }
       is_farm_manager: { Args: { p_farm_id: string }; Returns: boolean }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
+      set_org_member_farm_access: {
+        Args: {
+          p_farm_ids: string[]
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       path_length_km_from_json: { Args: { path: Json }; Returns: number }
       position_along_work_path: {
         Args: { path: Json; progress: number }
@@ -708,6 +731,7 @@ export type Database = {
         | "light"
         | "tractor"
         | "drone"
+        | "water_level"
       farm_member_role: "owner" | "manager" | "worker"
       land_status: "active" | "fallow" | "harvested" | "preparing"
       org_member_role: "owner" | "admin" | "member" | "viewer"
@@ -859,6 +883,7 @@ export const Constants = {
         "light",
         "tractor",
         "drone",
+        "water_level",
       ],
       farm_member_role: ["owner", "manager", "worker"],
       land_status: ["active", "fallow", "harvested", "preparing"],
