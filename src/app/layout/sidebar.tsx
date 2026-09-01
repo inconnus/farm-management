@@ -53,12 +53,16 @@ const Sidebar = () => {
   const role = currentOrg?.role ?? null;
   const showDashboard = canAccessNavItem(role, 'dashboard');
   const showCamera = canAccessNavItem(role, 'camera');
+  const showIotCameras = canAccessNavItem(role, 'iot-cameras');
   const showFarms = canAccessNavItem(role, 'farms');
   const showSettings = canAccessSettings(role);
   const activePath =
-    [`${base}/dashboard`, `${base}/farms`, `${base}/camera`].find((path) =>
-      location.pathname.startsWith(path),
-    ) || location.pathname;
+    [
+      `${base}/dashboard`,
+      `${base}/farms`,
+      `${base}/camera`,
+      `${base}/iot-cameras`,
+    ].find((path) => location.pathname.startsWith(path)) || location.pathname;
 
   return (
     <Padding className="left-0 top-0 z-10 absolute w-[250px]">
@@ -89,9 +93,9 @@ const Sidebar = () => {
           </Column>
         </Row>
         <Separator className="my-1" />
-        {(showDashboard || showCamera) && (
+        {(showDashboard || showCamera || showIotCameras) && (
           <>
-            {(showCamera || showFarms) && (
+            {(showCamera || showIotCameras || showFarms) && (
               <Row className="justify-between items-center">
                 <span className="text-xs text-gray-500">สาธารณะ</span>
                 <GlobeIcon className="size-3 text-gray-400" />
@@ -125,6 +129,17 @@ const Sidebar = () => {
                 >
                   <CctvIcon className="size-4" />
                   <span>กล้องจราจร</span>
+                </ListBox.Item>
+              )}
+
+              {showIotCameras && (
+                <ListBox.Item
+                  id="iot-cameras"
+                  textValue="กล้อง"
+                  className={`hover:bg-black/5 px-2 ${activePath.startsWith(`${base}/iot-cameras`) ? 'bg-black/5' : ''}`}
+                >
+                  <CctvIcon className="size-4" />
+                  <span>กล้อง</span>
                 </ListBox.Item>
               )}
             </ListBox>

@@ -1,12 +1,12 @@
 export type OrgMemberRole = 'owner' | 'admin' | 'member' | 'viewer';
 
-export type SidebarNavItem = 'dashboard' | 'camera' | 'farms';
+export type SidebarNavItem = 'dashboard' | 'camera' | 'iot-cameras' | 'farms';
 
 const ROLE_NAV_ACCESS: Record<OrgMemberRole, readonly SidebarNavItem[]> = {
   owner: ['dashboard', 'camera', 'farms'],
   admin: ['dashboard', 'camera', 'farms'],
   member: ['dashboard', 'camera', 'farms'],
-  viewer: ['dashboard'],
+  viewer: ['dashboard', 'iot-cameras'],
 };
 
 export function canAccessNavItem(

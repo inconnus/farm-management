@@ -7,7 +7,7 @@ import {
   fetchIOTDevices,
   fetchIOTDeviceTelemetry,
 } from './api';
-import { kasetkornCameraToCameraData } from './cameras';
+import { kasetkornCameraToCameraData, isGkKasetkornCamera } from './cameras';
 
 export const iotDeviceQueries = {
   all: (sensorApiSettings: Pick<SensorApiSettings, 'useMockData'>) =>
@@ -44,7 +44,7 @@ export const cameraQueries = {
       queryKey: ['kasetkorn-cameras'] as const,
       queryFn: async () => {
         // GetToken is only for live video — don't drop markers if it 401s.
-        const items = await fetchAllCameras();
+        const items = (await fetchAllCameras()).filter(isGkKasetkornCamera);
         let accessToken: string | undefined;
         try {
           accessToken = await fetchCameraToken();

@@ -4,7 +4,7 @@ import { useAtomValue } from 'jotai';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 type NavRoleRouteProps = {
-  navItem: 'dashboard' | 'camera' | 'farms';
+  navItem: 'dashboard' | 'camera' | 'iot-cameras' | 'farms';
   children: React.ReactNode;
 };
 

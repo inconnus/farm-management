@@ -14,6 +14,7 @@ import {
   ResetPasswordPage,
 } from '@features/auth';
 import CameraScreen from '@features/camera/components/camera_screen';
+import KasetkornCameraScreen from '@features/camera/components/kasetkorn_camera_screen';
 import DashboardScreen from '@features/dashboard/components/dashboard_screen';
 import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
 import MapView from '@features/map';
@@ -93,6 +94,16 @@ const App = () => {
                     element={
                       <NavRoleRoute navItem="camera">
                         <CameraScreen />
+                      </NavRoleRoute>
+                    }
+                  >
+                    <Route path=":deviceId" />
+                  </Route>
+                  <Route
+                    path="iot-cameras"
+                    element={
+                      <NavRoleRoute navItem="iot-cameras">
+                        <KasetkornCameraScreen />
                       </NavRoleRoute>
                     }
                   >

@@ -27,6 +27,12 @@ export function getSafeRedirectPath(
     if (p.startsWith(`${prefix}/camera`) && !canAccessNavItem(role, 'camera')) {
       return `${prefix}/dashboard`;
     }
+    if (
+      p.startsWith(`${prefix}/iot-cameras`) &&
+      !canAccessNavItem(role, 'iot-cameras')
+    ) {
+      return `${prefix}/dashboard`;
+    }
   }
 
   return `${p}${from.search ?? ''}${from.hash ?? ''}`;

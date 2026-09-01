@@ -1,6 +1,10 @@
 import type { CameraData } from '@features/map/components';
 import type { KasetkornCamera } from './api';
 
+export function isGkKasetkornCamera(cam: KasetkornCamera): boolean {
+  return cam.deviceSerial.startsWith('GK');
+}
+
 export function kasetkornCameraToCameraData(
   cam: KasetkornCamera,
   accessToken?: string,
