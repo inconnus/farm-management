@@ -13,11 +13,13 @@ import {
   ProtectedRoute,
   PublicRoute,
   RegisterPage,
+  PluksangRegisterPage,
   ResetPasswordPage,
 } from '@features/auth';
 import CameraScreen from '@features/camera/components/camera_screen';
 import KasetkornCameraScreen from '@features/camera/components/kasetkorn_camera_screen';
 import DashboardScreen from '@features/dashboard/components/dashboard_screen';
+import { FamilyScreen, NotificationsScreen } from '@features/family';
 import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
 import MapView from '@features/map';
 import { Navigate, Route, Routes } from 'react-router-dom';
@@ -32,6 +34,18 @@ const dashboardScreen = (
 const iotCamerasScreen = (
   <NavRoleRoute navItem="iot-cameras">
     <KasetkornCameraScreen />
+  </NavRoleRoute>
+);
+
+const deviceSharingScreen = (
+  <NavRoleRoute navItem="device-sharing">
+    <FamilyScreen />
+  </NavRoleRoute>
+);
+
+const notificationsScreen = (
+  <NavRoleRoute navItem="notifications">
+    <NotificationsScreen />
   </NavRoleRoute>
 );
 
@@ -52,6 +66,14 @@ const App = () => {
         element={
           <PublicRoute>
             <RegisterPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/auth/register/building"
+        element={
+          <PublicRoute>
+            <PluksangRegisterPage />
           </PublicRoute>
         }
       />
@@ -90,6 +112,14 @@ const App = () => {
       <Route
         path="/iot-cameras/:deviceId"
         element={<PluksangAppShell>{iotCamerasScreen}</PluksangAppShell>}
+      />
+      <Route
+        path="/device-sharing/*"
+        element={<PluksangAppShell>{deviceSharingScreen}</PluksangAppShell>}
+      />
+      <Route
+        path="/notifications"
+        element={<PluksangAppShell>{notificationsScreen}</PluksangAppShell>}
       />
 
       {/* Farm management — scoped under /:orgSlug */}

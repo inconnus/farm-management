@@ -8,6 +8,7 @@ import { useAuth } from '@features/auth/hooks/useAuth';
 import { useAppBasePath } from '@features/auth/hooks/useAppBasePath';
 import { formatFarmerDisplayName } from '@features/dashboard/data/api';
 import { useFarmerQuery } from '@features/dashboard/hooks';
+import { useIncomingInvitesQuery } from '@features/family/hooks';
 import { SettingsModal } from '@features/settings/SettingsModal';
 import {
   Avatar,
@@ -25,11 +26,13 @@ import { mapInstanceAtom } from '@shared/store/mapStore';
 import { setCurrentOrgAtom } from '@shared/store/orgStore';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
+  BellIcon,
   CctvIcon,
   GlobeIcon,
   HomeIcon,
   LandPlotIcon,
   LogOutIcon,
+  Share2Icon,
   SettingsIcon,
   UserIcon,
 } from 'lucide-react';
@@ -67,14 +70,20 @@ const Sidebar = () => {
   const showDashboard = isPluksang || canAccessNavItem(role, 'dashboard');
   const showCamera = !isPluksang && canAccessNavItem(role, 'camera');
   const showIotCameras = isPluksang || canAccessNavItem(role, 'iot-cameras');
+  const showDeviceSharing = isPluksang;
+  const showNotifications = isPluksang;
   const showFarms = !isPluksang && canAccessNavItem(role, 'farms');
   const showSettings = !isPluksang && canAccessSettings(role);
+  const { data: incomingInvites = [] } = useIncomingInvitesQuery();
+  const inviteCount = showNotifications ? incomingInvites.length : 0;
   const activePath =
     [
       `${base}/dashboard`,
       `${base}/farms`,
       `${base}/camera`,
       `${base}/iot-cameras`,
+      `${base}/device-sharing`,
+      `${base}/notifications`,
     ].find((path) => location.pathname.startsWith(path)) || location.pathname;
 
   const farmerName = farmer ? formatFarmerDisplayName(farmer) : null;
@@ -172,6 +181,49 @@ const Sidebar = () => {
                 >
                   <CctvIcon className="size-4" />
                   <span>กล้อง</span>
+                </ListBox.Item>
+              )}
+            </ListBox>
+          </>
+        )}
+        {(showDeviceSharing || showNotifications) && (
+          <>
+            <Row className="justify-between items-center">
+              <span className="text-xs text-gray-500">ส่วนตัว</span>
+              <UserIcon className="size-3 text-gray-400" />
+            </Row>
+            <ListBox
+              aria-label="Personal"
+              className="w-[200px]"
+              selectionMode="none"
+              onAction={(key) => {
+                map?.flyTo(DEFAULT_MAP_OVERVIEW);
+                return navigate(`${base}/${key}`);
+              }}
+            >
+              {showNotifications && (
+                <ListBox.Item
+                  id="notifications"
+                  textValue="แจ้งเตือน"
+                  className={`hover:bg-black/5 px-2 ${activePath.startsWith(`${base}/notifications`) ? 'bg-black/5' : ''}`}
+                >
+                  <BellIcon className="size-4" />
+                  <span className="flex-1">แจ้งเตือน</span>
+                  {inviteCount > 0 && (
+                    <span className="min-w-5 h-5 px-1.5 rounded-full bg-orange-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                      {inviteCount > 99 ? '99+' : inviteCount}
+                    </span>
+                  )}
+                </ListBox.Item>
+              )}
+              {showDeviceSharing && (
+                <ListBox.Item
+                  id="device-sharing"
+                  textValue="แชร์อุปกรณ์"
+                  className={`hover:bg-black/5 px-2 ${activePath.startsWith(`${base}/device-sharing`) ? 'bg-black/5' : ''}`}
+                >
+                  <Share2Icon className="size-4" />
+                  <span>แชร์อุปกรณ์</span>
                 </ListBox.Item>
               )}
             </ListBox>

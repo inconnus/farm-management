@@ -13,6 +13,7 @@ export {
 export { ProtectedRoute } from './components/ProtectedRoute';
 export { PublicRoute } from './components/PublicRoute';
 export { RegisterPage } from './components/RegisterPage';
+export { PluksangRegisterPage } from './components/PluksangRegisterPage';
 export { ResetPasswordPage } from './components/ResetPasswordPage';
 export { useAuth } from './hooks/useAuth';
 export { useAppBasePath } from './hooks/useAppBasePath';

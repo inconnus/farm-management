@@ -205,8 +205,8 @@ export function SidebarNav({
         ref={panelRef}
         className={twMerge(
           'z-10 absolute right-0',
-          className ??
-            'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden',
+          'pointer-events-auto bg-white/85 backdrop-blur-xl m-3 pt-1 rounded-3xl border border-gray-200 shadow-xl w-[400px] max-h-[calc(100vh-24px)] overflow-hidden',
+          className,
         )}
       >
         <motion.div

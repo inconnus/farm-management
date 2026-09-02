@@ -10,6 +10,8 @@ export interface IOTDevice {
   appIotId: string;
   appIotName: string;
   appFarmerId: string;
+  isOwner?: boolean;
+  permission?: string;
   appFarmId?: string;
   appFarmName?: string;
   tambon: string;

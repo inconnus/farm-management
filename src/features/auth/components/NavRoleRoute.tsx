@@ -5,11 +5,22 @@ import { PLUKSANG_HOME_PATH } from '../pluksangStore';
 import { authModeAtom, organizationsAtom } from '../store';
 
 type NavRoleRouteProps = {
-  navItem: 'dashboard' | 'camera' | 'iot-cameras' | 'farms';
+  navItem:
+    | 'dashboard'
+    | 'camera'
+    | 'iot-cameras'
+    | 'farms'
+    | 'device-sharing'
+    | 'notifications';
   children: React.ReactNode;
 };
 
-const PLUKSANG_NAV_ITEMS = new Set(['dashboard', 'iot-cameras']);
+const PLUKSANG_NAV_ITEMS = new Set([
+  'dashboard',
+  'iot-cameras',
+  'device-sharing',
+  'notifications',
+]);
 
 export function NavRoleRoute({ navItem, children }: NavRoleRouteProps) {
   const { orgSlug } = useParams<{ orgSlug: string }>();
