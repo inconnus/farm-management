@@ -1,10 +1,17 @@
-import { organizationsAtom, userAtom } from '@features/auth/store';
+import {
+  authModeAtom,
+  organizationsAtom,
+  pluksangSessionAtom,
+  userAtom,
+} from '@features/auth/store';
+import { useAuth } from '@features/auth/hooks/useAuth';
+import { useAppBasePath } from '@features/auth/hooks/useAppBasePath';
+import { formatFarmerDisplayName } from '@features/dashboard/data/api';
+import { useFarmerQuery } from '@features/dashboard/hooks';
 import { SettingsModal } from '@features/settings/SettingsModal';
 import {
   Avatar,
   Button,
-  Description,
-  Label,
   ListBox,
   Separator,
   Skeleton,
@@ -14,7 +21,6 @@ import {
   canAccessSettings,
   ORG_ROLE_LABEL,
 } from '@shared/lib/permissions';
-import { supabase } from '@shared/lib/supabase/client';
 import { mapInstanceAtom } from '@shared/store/mapStore';
 import { setCurrentOrgAtom } from '@shared/store/orgStore';
 import { useAtomValue, useSetAtom } from 'jotai';
@@ -35,12 +41,19 @@ import { Column, Padding, Row, Spacer } from '.';
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const { orgSlug } = useParams<{ orgSlug?: string }>();
+  const basePath = useAppBasePath();
   const user = useAtomValue(userAtom);
+  const authMode = useAtomValue(authModeAtom);
+  const pluksangSession = useAtomValue(pluksangSessionAtom);
   const organizations = useAtomValue(organizationsAtom);
   const map = useAtomValue(mapInstanceAtom);
   const setCurrentOrg = useSetAtom(setCurrentOrgAtom);
+  const { signOut } = useAuth();
+  const { data: farmer, isLoading: farmerLoading } = useFarmerQuery();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const isPluksang = authMode === 'pluksang';
 
   // Derive current org from URL slug
   const currentOrg = organizations.find((o) => o.slug === orgSlug) ?? null;
@@ -49,13 +62,13 @@ const Sidebar = () => {
     setCurrentOrg(currentOrg);
   }, [currentOrg, setCurrentOrg]);
 
-  const base = `/${orgSlug}`;
+  const base = basePath;
   const role = currentOrg?.role ?? null;
-  const showDashboard = canAccessNavItem(role, 'dashboard');
-  const showCamera = canAccessNavItem(role, 'camera');
-  const showIotCameras = canAccessNavItem(role, 'iot-cameras');
-  const showFarms = canAccessNavItem(role, 'farms');
-  const showSettings = canAccessSettings(role);
+  const showDashboard = isPluksang || canAccessNavItem(role, 'dashboard');
+  const showCamera = !isPluksang && canAccessNavItem(role, 'camera');
+  const showIotCameras = isPluksang || canAccessNavItem(role, 'iot-cameras');
+  const showFarms = !isPluksang && canAccessNavItem(role, 'farms');
+  const showSettings = !isPluksang && canAccessSettings(role);
   const activePath =
     [
       `${base}/dashboard`,
@@ -63,6 +76,19 @@ const Sidebar = () => {
       `${base}/camera`,
       `${base}/iot-cameras`,
     ].find((path) => location.pathname.startsWith(path)) || location.pathname;
+
+  const farmerName = farmer ? formatFarmerDisplayName(farmer) : null;
+  const displayName = isPluksang
+    ? farmerName ?? (farmerLoading ? '' : pluksangSession?.mobileNo ?? 'ปลูกสร้าง')
+    : (user?.user_metadata?.full_name ?? user?.email ?? '');
+  const displaySubtitle = isPluksang
+    ? pluksangSession?.appFarmerId ?? ''
+    : (user?.email ?? '');
+  const avatarInitials = isPluksang
+    ? farmer
+      ? `${farmer.firstName?.slice(0, 1) ?? ''}${farmer.lastName?.slice(0, 1) ?? ''}`.toUpperCase()
+      : displayName.slice(0, 2).toUpperCase() || 'ปล'
+    : displayName.slice(0, 2).toUpperCase();
 
   return (
     <Padding className="left-0 top-0 z-10 absolute w-[250px]">
@@ -74,16 +100,22 @@ const Sidebar = () => {
               alt={currentOrg?.name ?? ''}
             />
             <Avatar.Fallback>
-              {currentOrg?.name?.slice(0, 2) ?? ''}
+              {isPluksang
+                ? 'ปล'
+                : (currentOrg?.name?.slice(0, 2) ?? '')}
             </Avatar.Fallback>
           </Avatar>
-          <Column className={`space-y-${currentOrg ? '0' : '2'} w-full `}>
-            {currentOrg ? (
+          <Column className={`space-y-${currentOrg || isPluksang ? '0' : '2'} w-full `}>
+            {isPluksang ? (
+              <span className="text-sm">ปลูกสร้าง</span>
+            ) : currentOrg ? (
               <span className="text-sm">{currentOrg?.name}</span>
             ) : (
               <Skeleton className="w-full h-2 bg-black/5" />
             )}
-            {currentOrg ? (
+            {isPluksang ? (
+              <span className="text-sm text-gray-500">เกษตรกร</span>
+            ) : currentOrg ? (
               <span className="text-sm text-gray-500">
                 {ORG_ROLE_LABEL[currentOrg.role] ?? currentOrg.role}
               </span>
@@ -197,17 +229,16 @@ const Sidebar = () => {
 
         <Row className="items-center gap-2 hover:bg-black/5 rounded-2xl cursor-pointer p-2">
           <Avatar size="sm">
-            {/* <Avatar.Image src="https://github.com/shadcn.png" /> */}
-            <Avatar.Fallback>
-              {user?.email?.slice(0, 2).toUpperCase()}
-            </Avatar.Fallback>
+            <Avatar.Fallback>{avatarInitials}</Avatar.Fallback>
           </Avatar>
           <Column className="min-w-0 flex-1">
-            <span className="text-sm truncate block">
-              {user?.user_metadata?.full_name}
-            </span>
+            {isPluksang && farmerLoading ? (
+              <Skeleton className="h-4 w-24 bg-black/5" />
+            ) : (
+              <span className="text-sm truncate block">{displayName}</span>
+            )}
             <span className="text-sm truncate text-gray-500 block">
-              {user?.email}
+              {displaySubtitle}
             </span>
           </Column>
         </Row>
@@ -215,8 +246,8 @@ const Sidebar = () => {
         <Button
           variant="ghost"
           className="w-full justify-start hover:bg-black/5"
-          onPress={() => {
-            supabase.auth.signOut();
+          onPress={async () => {
+            await signOut();
             navigate('/auth/login');
           }}
         >

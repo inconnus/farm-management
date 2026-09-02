@@ -1,13 +1,17 @@
 import type { SensorApiSettings } from '@shared/store/sensorApiStore';
 import { pickMockOnlineIds } from './mockIotDevices';
 
+export type KasetkornAuthContext =
+  | { scope: 'all'; token: string }
+  | { scope: 'farmer'; token: string; appFarmerId: string };
+
 export interface IOTDevice {
   _id: string;
   appIotId: string;
   appIotName: string;
   appFarmerId: string;
-  appFarmId: string;
-  appFarmName: string;
+  appFarmId?: string;
+  appFarmName?: string;
   tambon: string;
   amphur: string;
   province: string;
@@ -136,9 +140,14 @@ const KASETKORN_AUTH_TOKEN =
 
 const KASETKORN_API_BASE = 'https://api.kasetkorn.app';
 
-const kasetkornAuthHeaders = {
-  Authorization: `Bearer ${KASETKORN_AUTH_TOKEN}`,
+export const defaultKasetkornAuth: KasetkornAuthContext = {
+  scope: 'all',
+  token: KASETKORN_AUTH_TOKEN,
 };
+
+function kasetkornAuthHeaders(auth: KasetkornAuthContext) {
+  return { Authorization: `Bearer ${auth.token}` };
+}
 
 function pickLatestTelemetry(
   data: TelemetryResponse['data'],
@@ -152,10 +161,17 @@ function pickLatestTelemetry(
   })[0];
 }
 
-async function fetchRealIOTDevices(): Promise<IOTDevice[]> {
-  const response = await fetch(
-    'https://api.kasetkorn.app/api/iot/setup/GetIotAll',
-  );
+async function fetchRealIOTDevices(
+  auth: KasetkornAuthContext,
+): Promise<IOTDevice[]> {
+  const url =
+    auth.scope === 'farmer'
+      ? `${KASETKORN_API_BASE}/api/iot/setup/GetIot/${auth.appFarmerId}`
+      : `${KASETKORN_API_BASE}/api/iot/setup/GetIotAll`;
+
+  const response = await fetch(url, {
+    headers: auth.scope === 'farmer' ? kasetkornAuthHeaders(auth) : undefined,
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch IoT devices');
   }
@@ -168,6 +184,7 @@ async function fetchRealIOTDevices(): Promise<IOTDevice[]> {
 export const fetchIOTDeviceTelemetry = async (
   appIotId: string,
   settings: SensorApiSettings,
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
 ): Promise<TelemetryResponse> => {
   if (settings.useMockData) {
     // ออฟไลน์ → ไม่มี telemetry
@@ -181,7 +198,7 @@ export const fetchIOTDeviceTelemetry = async (
     const response = await fetch('https://api.kasetkorn.app/api/iot/read/all', {
       method: 'POST',
       headers: {
-        ...kasetkornAuthHeaders,
+        ...kasetkornAuthHeaders(auth),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ UID: appIotId, time: settings.timeRange }),
@@ -196,7 +213,7 @@ export const fetchIOTDeviceTelemetry = async (
 
   const response = await fetch(
     `https://api.kasetkorn.app/api/iot/read/last/${appIotId}`,
-    { headers: kasetkornAuthHeaders },
+    { headers: kasetkornAuthHeaders(auth) },
   );
   if (!response.ok) {
     throw new Error('Failed to fetch telemetry');
@@ -206,8 +223,9 @@ export const fetchIOTDeviceTelemetry = async (
 
 export const fetchIOTDevices = async (
   settings?: Pick<SensorApiSettings, 'useMockData'>,
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
 ): Promise<IOTDevice[]> => {
-  const apiDevices = await fetchRealIOTDevices();
+  const apiDevices = await fetchRealIOTDevices(auth);
 
   if (settings?.useMockData) {
     // จำนวนเท่าของจริง — mock แค่สถานะ online ~87%
@@ -236,12 +254,17 @@ export interface KasetkornCamera {
   lat: number;
   lon: number;
   isPTZ: boolean;
+  isOwner?: boolean;
+  permission?: string;
+  status?: number;
   siteId?: string;
 }
 
-export const fetchCameraToken = async (): Promise<string> => {
+export const fetchCameraToken = async (
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
+): Promise<string> => {
   const response = await fetch(`${KASETKORN_API_BASE}/api/camera/GetToken`, {
-    headers: kasetkornAuthHeaders,
+    headers: kasetkornAuthHeaders(auth),
   });
   if (!response.ok) {
     throw new Error('Failed to fetch camera token');
@@ -253,16 +276,88 @@ export const fetchCameraToken = async (): Promise<string> => {
   return json.Authorization;
 };
 
-export const fetchAllCameras = async (): Promise<KasetkornCamera[]> => {
-  const response = await fetch(
-    `${KASETKORN_API_BASE}/api/camera/GetCameraAll`,
-    { headers: kasetkornAuthHeaders },
-  );
+export const fetchAllCameras = async (
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
+): Promise<KasetkornCamera[]> => {
+  const url =
+    auth.scope === 'farmer'
+      ? `${KASETKORN_API_BASE}/api/camera/GetCamera/${auth.appFarmerId}`
+      : `${KASETKORN_API_BASE}/api/camera/GetCameraAll`;
+
+  const response = await fetch(url, {
+    headers: kasetkornAuthHeaders(auth),
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch cameras');
   }
   const json = (await response.json()) as { data?: KasetkornCamera[] };
   return json.data ?? [];
+};
+
+export const fetchPtzContinuous = async (
+  deviceSerial: string,
+  pan: number,
+  tilt: number,
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
+): Promise<void> => {
+  const response = await fetch(
+    `${KASETKORN_API_BASE}/api/camera/PTZContinuous/${deviceSerial}`,
+    {
+      method: 'PUT',
+      headers: {
+        ...kasetkornAuthHeaders(auth),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pan, tilt }),
+    },
+  );
+  if (!response.ok) {
+    const json = (await response.json().catch(() => ({}))) as {
+      detail?: string;
+    };
+    throw new Error(json.detail ?? 'ควบคุม PTZ ไม่สำเร็จ');
+  }
+};
+
+export interface FarmerProfile {
+  appFarmerId: string;
+  title: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dateOfBirth: string;
+  idCard: string;
+  mobileNo: string;
+  email: string;
+  addr: string;
+  province: string;
+  amphur: string;
+  tambon: string;
+  postCode: string;
+}
+
+export function formatFarmerDisplayName(farmer: FarmerProfile): string {
+  return [farmer.title, farmer.firstName, farmer.lastName]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export const fetchFarmer = async (
+  appFarmerId: string,
+  auth: KasetkornAuthContext = defaultKasetkornAuth,
+): Promise<FarmerProfile> => {
+  const response = await fetch(`${KASETKORN_API_BASE}/api/farmer/GetFarmer`, {
+    method: 'POST',
+    headers: {
+      ...kasetkornAuthHeaders(auth),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ appFarmerId }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch farmer profile');
+  }
+  return response.json();
 };
 
 export const fetchGetLand = async (

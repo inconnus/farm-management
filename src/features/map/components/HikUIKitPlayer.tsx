@@ -1,11 +1,16 @@
+import { DEFAULT_EZVIZ_STREAM_QUALITY } from '@features/camera/data/streamQuality';
 import type { HikCameraParams } from '@features/map/types/hikUIKit';
 import { EZUIKitPlayer } from 'ezuikit-js';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type HikUIKitPlayerProps = {
   params: HikCameraParams;
   instanceKey: string;
   className?: string;
+  /** เปลี่ยนเมื่อ grid layout เปลี่ยน — trigger reSize */
+  layoutRevision?: number;
+  /** ไม่ใส่ min-height สำหรับ grid cell */
+  fillContainer?: boolean;
 };
 
 const API_LIVE_ADDRESS =
@@ -34,12 +39,67 @@ export function HikUIKitPlayer({
   params,
   instanceKey,
   className,
+  layoutRevision = 0,
+  fillContainer = false,
 }: HikUIKitPlayerProps) {
   const containerId = `hik-ezuikit-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   const playerRef = useRef<EZUIKitPlayer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const measurePlayerSize = useCallback((): { w: number; h: number } | null => {
+    const el = document.getElementById(containerId);
+    if (!el) return null;
+
+    const fsEl = document.fullscreenElement;
+    const inFullscreen = fsEl !== null && fsEl.contains(el);
+
+    if (inFullscreen) {
+      return { w: window.innerWidth, h: window.innerHeight };
+    }
+
+    const gridCell = el.closest('.camera-grid-cell');
+    const videoLayer = el.closest('.camera-fs-video-layer');
+    const measureEl = gridCell ?? videoLayer ?? el.parentElement ?? el;
+    const rect = measureEl.getBoundingClientRect();
+
+    return {
+      w: Math.max(Math.round(rect.width), MIN_W),
+      h: Math.max(Math.round(rect.height), MIN_H),
+    };
+  }, [containerId]);
+
+  const resizePlayer = useCallback(() => {
+    const el = document.getElementById(containerId);
+    const current = playerRef.current;
+    const size = measurePlayerSize();
+    if (!el || !current || !size) return;
+
+    el.style.width = '';
+    el.style.height = '';
+    el.style.minHeight = '';
+
+    try {
+      current.reSize(size.w, size.h);
+    } catch {
+      /* ignore */
+    }
+  }, [containerId, measurePlayerSize]);
+
+  const scheduleResize = useCallback(() => {
+    requestAnimationFrame(() => {
+      resizePlayer();
+      requestAnimationFrame(() => resizePlayer());
+    });
+    window.setTimeout(resizePlayer, 50);
+    window.setTimeout(resizePlayer, 150);
+    window.setTimeout(resizePlayer, 300);
+  }, [resizePlayer]);
+
+  useEffect(() => {
+    if (layoutRevision > 0) scheduleResize();
+  }, [layoutRevision, scheduleResize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +123,12 @@ export function HikUIKitPlayer({
       if (host && document.documentElement.contains(host)) return host;
       return null;
     };
+
+    const onFullscreenChange = () => {
+      scheduleResize();
+    };
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
 
     const initPlayer = async () => {
       let attempts = 0;
@@ -88,7 +154,7 @@ export function HikUIKitPlayer({
             deviceSerial: params.deviceSerial,
             channelNo: params.channelNo ?? 1,
             code: params.code ?? '',
-            quality: params.quality ?? 1,
+            quality: params.quality ?? DEFAULT_EZVIZ_STREAM_QUALITY,
           }),
         });
 
@@ -108,8 +174,9 @@ export function HikUIKitPlayer({
 
         const url = json.data.url;
         const accessToken = decodeTicket(json.data.ticket ?? '');
-        const w = Math.max(host.clientWidth, MIN_W);
-        const h = Math.max(host.clientHeight, MIN_H);
+        const size = measurePlayerSize();
+        const w = size?.w ?? Math.max(host.clientWidth, MIN_W);
+        const h = size?.h ?? Math.max(host.clientHeight, MIN_H);
 
         if (playerRef.current) {
           try {
@@ -161,19 +228,13 @@ export function HikUIKitPlayer({
         hideLoadingTimer = window.setTimeout(clearLoading, 8000);
 
         resizeObserver = new ResizeObserver(() => {
-          const el = document.getElementById(containerId);
-          const current = playerRef.current;
-          if (!el || !current) return;
-          try {
-            current.reSize(
-              Math.max(el.clientWidth, MIN_W),
-              Math.max(el.clientHeight, MIN_H),
-            );
-          } catch {
-            /* ignore */
-          }
+          resizePlayer();
         });
         resizeObserver.observe(host);
+        const videoLayer = host.closest('.camera-fs-video-layer');
+        if (videoLayer) resizeObserver.observe(videoLayer);
+        const gridCell = host.closest('.camera-grid-cell');
+        if (gridCell) resizeObserver.observe(gridCell);
       } catch (err) {
         if (cancelled || abort.signal.aborted) return;
         clearLoading();
@@ -188,6 +249,7 @@ export function HikUIKitPlayer({
       abort.abort();
       window.clearTimeout(hideLoadingTimer);
       resizeObserver?.disconnect();
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
 
       const player = playerRef.current;
       playerRef.current = null;
@@ -211,15 +273,20 @@ export function HikUIKitPlayer({
     params.channelNo,
     params.code,
     params.quality,
+    measurePlayerSize,
+    resizePlayer,
+    scheduleResize,
   ]);
+
+  const minHClass = fillContainer ? 'min-h-0' : 'min-h-[180px]';
 
   return (
     <div
-      className={`relative ${className ?? 'h-full w-full min-h-[180px] bg-black'}`}
+      className={`relative ${className ?? `h-full w-full ${minHClass} bg-black`}`}
     >
       <div
         id={containerId}
-        className="h-full w-full min-h-[180px] bg-[#4C4B4B]"
+        className={`h-full w-full ${minHClass} bg-[#4C4B4B]`}
       />
       {loading && !error && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-white text-sm pointer-events-none">

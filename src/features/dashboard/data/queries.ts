@@ -1,8 +1,10 @@
+import type { KasetkornAuthContext } from './api';
 import type { SensorApiSettings } from '@shared/store/sensorApiStore';
 import { queryOptions } from '@tanstack/react-query';
 import {
   fetchAllCameras,
   fetchCameraToken,
+  fetchFarmer,
   fetchGetLand,
   fetchIOTDevices,
   fetchIOTDeviceTelemetry,
@@ -10,14 +12,23 @@ import {
 import { kasetkornCameraToCameraData, isGkKasetkornCamera } from './cameras';
 
 export const iotDeviceQueries = {
-  all: (sensorApiSettings: Pick<SensorApiSettings, 'useMockData'>) =>
+  all: (
+    sensorApiSettings: Pick<SensorApiSettings, 'useMockData'>,
+    auth: KasetkornAuthContext,
+  ) =>
     queryOptions({
-      queryKey: ['iot-devices', sensorApiSettings.useMockData] as const,
-      queryFn: () => fetchIOTDevices(sensorApiSettings),
+      queryKey: [
+        'iot-devices',
+        sensorApiSettings.useMockData,
+        auth.scope,
+        auth.scope === 'farmer' ? auth.appFarmerId : null,
+      ] as const,
+      queryFn: () => fetchIOTDevices(sensorApiSettings, auth),
     }),
   telemetry: (
     appIotId: string | undefined,
     sensorApiSettings: SensorApiSettings,
+    auth: KasetkornAuthContext,
   ) =>
     queryOptions({
       queryKey: [
@@ -26,28 +37,37 @@ export const iotDeviceQueries = {
         sensorApiSettings.mode,
         sensorApiSettings.timeRange,
         sensorApiSettings.useMockData,
+        auth.scope,
+        auth.scope === 'farmer' ? auth.appFarmerId : null,
       ] as const,
-      queryFn: () => fetchIOTDeviceTelemetry(appIotId!, sensorApiSettings),
+      queryFn: () => fetchIOTDeviceTelemetry(appIotId!, sensorApiSettings, auth),
       enabled: !!appIotId,
       select: (data) => ({ appIotId, telemetry: data?.data?.[0] }),
     }),
 };
 
 export const cameraQueries = {
-  raw: () =>
+  raw: (auth: KasetkornAuthContext) =>
     queryOptions({
-      queryKey: ['kasetkorn-cameras-raw'] as const,
-      queryFn: fetchAllCameras,
+      queryKey: [
+        'kasetkorn-cameras-raw',
+        auth.scope,
+        auth.scope === 'farmer' ? auth.appFarmerId : null,
+      ] as const,
+      queryFn: () => fetchAllCameras(auth),
     }),
-  all: () =>
+  all: (auth: KasetkornAuthContext) =>
     queryOptions({
-      queryKey: ['kasetkorn-cameras'] as const,
+      queryKey: [
+        'kasetkorn-cameras',
+        auth.scope,
+        auth.scope === 'farmer' ? auth.appFarmerId : null,
+      ] as const,
       queryFn: async () => {
-        // GetToken is only for live video — don't drop markers if it 401s.
-        const items = (await fetchAllCameras()).filter(isGkKasetkornCamera);
+        const items = (await fetchAllCameras(auth)).filter(isGkKasetkornCamera);
         let accessToken: string | undefined;
         try {
-          accessToken = await fetchCameraToken();
+          accessToken = await fetchCameraToken(auth);
         } catch (error) {
           console.warn(
             '[cameras] GetToken failed; rendering markers without live stream',
@@ -58,6 +78,16 @@ export const cameraQueries = {
           kasetkornCameraToCameraData(cam, accessToken),
         );
       },
+    }),
+};
+
+export const farmerQueries = {
+  profile: (appFarmerId: string | undefined, auth: KasetkornAuthContext) =>
+    queryOptions({
+      queryKey: ['farmer-profile', appFarmerId] as const,
+      queryFn: () => fetchFarmer(appFarmerId!, auth),
+      enabled: !!appFarmerId && auth.scope === 'farmer',
+      staleTime: 5 * 60 * 1000,
     }),
 };
 

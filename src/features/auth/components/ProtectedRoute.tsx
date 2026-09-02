@@ -1,6 +1,11 @@
 import { useAtomValue } from 'jotai';
 import { Navigate, useLocation } from 'react-router-dom';
-import { isAuthenticatedAtom, isAuthInitializedAtom } from '../store';
+import { PLUKSANG_HOME_PATH } from '../pluksangStore';
+import {
+  authModeAtom,
+  isAuthenticatedAtom,
+  isAuthInitializedAtom,
+} from '../store';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
@@ -9,6 +14,7 @@ type ProtectedRouteProps = {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
   const isInitialized = useAtomValue(isAuthInitializedAtom);
+  const authMode = useAtomValue(authModeAtom);
   const location = useLocation();
 
   if (!isInitialized) {
@@ -43,6 +49,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
+  }
+
+  if (authMode === 'pluksang' && location.pathname === '/org/select') {
+    return <Navigate to={PLUKSANG_HOME_PATH} replace />;
   }
 
   return <>{children}</>;

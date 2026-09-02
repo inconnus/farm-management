@@ -1,7 +1,9 @@
 import mapboxgl from 'mapbox-gl';
 import { useEffect, useRef, useState } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { isPolygonEditModeAtom, mapInstanceAtom } from '@store/mapStore';
+import { CameraGridView } from '@features/camera/components/CameraGridView';
+import { authModeAtom } from '@features/auth/store';
+import { isPolygonEditModeAtom, mapInstanceAtom, mapViewModeAtom } from '@store/mapStore';
 import {
   clickedPolygonLandIdAtom,
   selectLandAtom,
@@ -20,6 +22,7 @@ import { SolarCellPopup } from './SolarCellPopup';
 import { VehicleMapMarkerOverlay } from './VehicleMapMarkerOverlay';
 import { VehiclePopup } from './VehiclePopup';
 import { WaterLevelPopup } from './WaterLevelPopup';
+import { MapViewModeSwitcher } from './MapViewModeSwitcher';
 
 const ACCESS_TOKEN = import.meta.env.PUBLIC_MAPBOX_TOKEN;
 
@@ -30,6 +33,11 @@ const MapView = () => {
   const [mapReady, setMapReady] = useState(false);
 
   const [devicePopup, setDevicePopup] = useAtom(devicePopupAtom);
+  const mapViewMode = useAtomValue(mapViewModeAtom);
+  const authMode = useAtomValue(authModeAtom);
+  const setMapViewMode = useSetAtom(mapViewModeAtom);
+  const isPluksang = authMode === 'pluksang';
+  const showCameraGrid = isPluksang && mapViewMode === 'camera-grid';
 
   const setMapInstance = useSetAtom(mapInstanceAtom);
   const selectLand = useSetAtom(selectLandAtom);
@@ -41,6 +49,36 @@ const MapView = () => {
   useEffect(() => {
     isPolygonEditModeRef.current = isPolygonEditMode;
   }, [isPolygonEditMode]);
+
+  useEffect(() => {
+    if (!isPluksang && mapViewMode !== 'map') {
+      setMapViewMode('map');
+    }
+  }, [isPluksang, mapViewMode, setMapViewMode]);
+
+  useEffect(() => {
+    if (mapViewMode === 'camera-grid') {
+      setDevicePopup(null);
+      return;
+    }
+    const m = map.current;
+    if (!m) return;
+    const resize = () => m.resize();
+    requestAnimationFrame(resize);
+    window.setTimeout(resize, 100);
+  }, [mapViewMode, setDevicePopup]);
+
+  useEffect(() => {
+    const el = mapContainer.current;
+    const m = map.current;
+    if (!el || !m || !mapReady) return;
+
+    const observer = new ResizeObserver(() => {
+      m.resize();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [mapReady]);
 
   const { data: dbTilesets } = useTilesetsQuery();
 
@@ -176,12 +214,19 @@ const MapView = () => {
   }, [dbTilesets, mapReady]);
 
   return (
-    <>
-      <div id="map-container" ref={mapContainer} />
-      <MapPathOverlay />
-      <VehicleMapMarkerOverlay />
-      {mapReady && <MapStyleSwitcher />}
-      {devicePopup && map.current && (
+    <div className="relative flex flex-1 min-w-0 h-full overflow-hidden">
+      <div className="relative flex-1 min-h-0 w-full h-full">
+        <div
+          id="map-container"
+          ref={mapContainer}
+          className={`absolute inset-0 h-full w-full ${showCameraGrid ? 'invisible' : ''}`}
+        />
+        {mapViewMode === 'map' && <MapPathOverlay />}
+        {mapViewMode === 'map' && <VehicleMapMarkerOverlay />}
+        {mapReady && mapViewMode === 'map' && <MapStyleSwitcher />}
+        {showCameraGrid && <CameraGridView />}
+        {isPluksang && <MapViewModeSwitcher />}
+        {devicePopup && map.current && mapViewMode === 'map' && (
         <MapPopup
           map={map.current}
           lngLat={devicePopup.lngLat}
@@ -214,13 +259,14 @@ const MapView = () => {
             <VehiclePopup vehicle={devicePopup.vehicle} />
           )}
         </MapPopup>
-      )}
+        )}
+      </div>
       <style>{`
         .draw-control-hidden .mapboxgl-ctrl-group:has(.mapbox-gl-draw_polygon) {
           display: none;
         }
       `}</style>
-    </>
+    </div>
   );
 };
 

@@ -1,3 +1,4 @@
+import { DEFAULT_EZVIZ_STREAM_QUALITY } from '@features/camera/data/streamQuality';
 import type { DbDevice } from '@features/devices/hooks/useDevicesQuery';
 import type { HikCameraParams } from '@features/map/types/hikUIKit';
 import { CctvIcon } from 'lucide-react';
@@ -23,6 +24,12 @@ export type CameraData = {
   /** HLS playlist (.m3u8) — เก็บใน device.config เป็น `m3u8_url` */
   m3u8Url?: string;
   streamUrl?: string;
+  /** serial กล้อง Kasetkorn / Ezviz */
+  deviceSerial?: string;
+  /** รองรับ PTZ */
+  isPTZ?: boolean;
+  /** สิทธิ์ควบคุมจาก API (permission === 'control') */
+  canControl?: boolean;
 };
 
 function readHikParams(
@@ -43,7 +50,7 @@ function readHikParams(
       (config.channelNo as number | string) ??
       1,
     code: (config.code as string) || '',
-    quality: (config.quality as number) ?? 1,
+    quality: (config.quality as number) ?? DEFAULT_EZVIZ_STREAM_QUALITY,
     method: (config.method as number) ?? 2,
   };
 }

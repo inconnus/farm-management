@@ -13,3 +13,7 @@ export const isImageEditModeAtom = atom<boolean>(true);
 
 // Atom for polygon edit mode (toggles select/drag/edit features)
 export const isPolygonEditModeAtom = atom<boolean>(false);
+
+export type MapViewMode = 'map' | 'camera-grid';
+
+export const mapViewModeAtom = atom<MapViewMode>('map');

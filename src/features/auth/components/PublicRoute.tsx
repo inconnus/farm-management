@@ -1,6 +1,11 @@
 import { useAtomValue } from 'jotai';
 import { Navigate, useLocation } from 'react-router-dom';
-import { isAuthenticatedAtom, isAuthInitializedAtom } from '../store';
+import { PLUKSANG_HOME_PATH } from '../pluksangStore';
+import {
+  authModeAtom,
+  isAuthenticatedAtom,
+  isAuthInitializedAtom,
+} from '../store';
 
 type PublicRouteProps = {
   children: React.ReactNode;
@@ -9,6 +14,7 @@ type PublicRouteProps = {
 export function PublicRoute({ children }: PublicRouteProps) {
   const isAuthenticated = useAtomValue(isAuthenticatedAtom);
   const isInitialized = useAtomValue(isAuthInitializedAtom);
+  const authMode = useAtomValue(authModeAtom);
   const location = useLocation();
 
   if (!isInitialized) {
@@ -38,9 +44,10 @@ export function PublicRoute({ children }: PublicRouteProps) {
     );
   }
 
-  // ถ้าอยู่ที่ /auth/login ให้ LoginPage จัดการ flow เอง
-  // ไม่ redirect ออก เพราะ LoginPage จะ navigate ไปเองหลังเลือก org
   if (isAuthenticated && location.pathname !== '/auth/login') {
+    if (authMode === 'pluksang') {
+      return <Navigate to={PLUKSANG_HOME_PATH} replace />;
+    }
     return <Navigate to="/org/select" replace />;
   }
 

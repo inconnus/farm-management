@@ -1,4 +1,5 @@
 import { Column, Row } from '@app/layout';
+import { useAppBasePath } from '@features/auth/hooks/useAppBasePath';
 import {
   useCamerasQuery,
   useIOTDevicesQuery,
@@ -76,7 +77,9 @@ const DashboardScreen = () => {
     return map;
   }, [telemetryQueries]);
 
-  const { deviceId, orgSlug } = useParams();
+  const { deviceId } = useParams();
+  const basePath = useAppBasePath();
+  const dashboardPath = `${basePath}/dashboard`;
   const map = useAtomValue(mapInstanceAtom);
   const setDevicePopup = useSetAtom(devicePopupAtom);
   const navigate = useNavigate();
@@ -97,10 +100,10 @@ const DashboardScreen = () => {
       setDevicePopup(null);
       setClosePopupSignal((n) => n + 1);
       if (key === 'cameras' && deviceId) {
-        navigate(`/${orgSlug}/dashboard`);
+        navigate(dashboardPath);
       }
     },
-    [deviceId, navigate, orgSlug, setDevicePopup],
+    [dashboardPath, deviceId, navigate, setDevicePopup],
   );
 
   const filteredDevices = useMemo(() => {
@@ -321,7 +324,7 @@ const DashboardScreen = () => {
                                   signal: p.signal + 1,
                                 }));
                               } else {
-                                navigate(`/${orgSlug}/dashboard/${device._id}`);
+                                navigate(`${dashboardPath}/${device._id}`);
                               }
                             }}
                           >
@@ -466,7 +469,7 @@ const DashboardScreen = () => {
       filteredCameras,
       map,
       navigate,
-      orgSlug,
+      dashboardPath,
       setDevicePopup,
       setOpenPopupIdSignal,
       setIsSummaryModalOpen,
@@ -478,7 +481,7 @@ const DashboardScreen = () => {
   return (
     <>
       <SidebarNav
-        basePath={`/${orgSlug}/dashboard`}
+        basePath={dashboardPath}
         pages={pages}
         className="absolute right-0 pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
       >
@@ -606,7 +609,7 @@ const DashboardScreen = () => {
                   </div>
                 }
                 onClick={() => {
-                  navigate(`/${orgSlug}/dashboard/${device._id}`);
+                  navigate(`${dashboardPath}/${device._id}`);
                 }}
               >
                 <GlowingPin isOnline={!!telemetry} />

@@ -8,9 +8,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Location } from 'react-router-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useSetAtom } from 'jotai';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserOrganizations } from '../orgApi';
+import { PluksangAuthError, pluksangSignIn } from '../pluksangApi';
+import { PLUKSANG_HOME_PATH, savePluksangSession } from '../pluksangStore';
 import { getSafeRedirectPath } from '../returnToPath';
+import { authAtom } from '../store';
 
 // ─── Animation (iOS-style push/pop) ──────────────────────────────
 
@@ -34,6 +38,168 @@ const pageTransition = { duration: DURATION, ease: IOS_EASE };
 // ─── Step type ────────────────────────────────────────────────────
 
 type Step = 'login' | 'org';
+type LoginMode = 'farm' | 'pluksang';
+
+// ─── LoginModeToggle ──────────────────────────────────────────────
+
+interface LoginModeToggleProps {
+  mode: LoginMode;
+  onChange: (mode: LoginMode) => void;
+}
+
+function LoginModeToggle({ mode, onChange }: LoginModeToggleProps) {
+  return (
+    <div className="mx-8 mt-8 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+    
+      <button
+        type="button"
+        onClick={() => onChange('pluksang')}
+        className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+          mode === 'pluksang'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        Smart Building
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('farm')}
+        className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+          mode === 'farm'
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        Smart Farm
+      </button>
+    </div>
+  );
+}
+
+// ─── PluksangLoginStep ────────────────────────────────────────────
+
+interface PluksangLoginStepProps {
+  onSuccess: () => void;
+}
+
+function PluksangLoginStep({ onSuccess }: PluksangLoginStepProps) {
+  const setAuth = useSetAtom(authAtom);
+  const [mobileNoOrIdCard, setMobileNoOrIdCard] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const session = await pluksangSignIn(mobileNoOrIdCard, password);
+      savePluksangSession(session);
+      setAuth({
+        mode: 'pluksang',
+        pluksangSession: session,
+        user: null,
+        session: null,
+        profile: null,
+        organizations: [],
+        isLoading: false,
+        isInitialized: true,
+        isProfileReady: true,
+      });
+      setIsLoading(false);
+      onSuccess();
+    } catch (err) {
+      if (err instanceof PluksangAuthError) {
+        setError(err.message);
+      } else {
+        setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      }
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-8 pt-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label
+            htmlFor="mobileNoOrIdCard"
+            className="block text-sm font-medium text-gray-700"
+          >
+            เลขบัตรประชาชน / เบอร์โทรศัพท์
+          </label>
+          <input
+            id="mobileNoOrIdCard"
+            type="text"
+            autoComplete="username"
+            required
+            value={mobileNoOrIdCard}
+            onChange={(e) => setMobileNoOrIdCard(e.target.value)}
+            className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+            placeholder="เบอร์โทรศัพท์หรือเลขบัตรประชาชน"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="pluksang-password"
+            className="block text-sm font-medium text-gray-700"
+          >
+            รหัสผ่าน
+          </label>
+          <input
+            id="pluksang-password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="flex w-full items-center justify-center rounded-lg bg-[#03662c] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#03662c]/80 focus:outline-none focus:ring-2 focus:ring-[#03662c]/50 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? (
+            <svg
+              className="mr-2 h-4 w-4 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          ) : null}
+          {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 // ─── LoginStep ────────────────────────────────────────────────────
 
@@ -338,6 +504,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [loginMode, setLoginMode] = useState<LoginMode>('farm');
   const [step, setStep] = useState<Step>('login');
   const [direction, setDirection] = useState(1);
   const [orgs, setOrgs] = useState<OrgMembership[]>([]);
@@ -409,6 +576,10 @@ export function LoginPage() {
     [redirectAfterOrg],
   );
 
+  const handlePluksangSuccess = useCallback(() => {
+    navigate(PLUKSANG_HOME_PATH, { replace: true });
+  }, [navigate]);
+
   const handleBack = useCallback(() => {
     setDirection(-1);
     setStep('login');
@@ -433,6 +604,9 @@ export function LoginPage() {
       {/* Card */}
       <div className="relative w-full max-w-md">
         <div className="overflow-hidden rounded-3xl bg-white/85 shadow-xl ring-1 ring-black/5 backdrop-blur-xs">
+          {step === 'login' && (
+            <LoginModeToggle mode={loginMode} onChange={setLoginMode} />
+          )}
           {/* Animated height wrapper */}
           <motion.div
             className="relative overflow-hidden"
@@ -459,7 +633,11 @@ export function LoginPage() {
                     willChange: 'transform, opacity',
                   }}
                 >
-                  <LoginStep onSuccess={handleLoginSuccess} />
+                  {loginMode === 'pluksang' ? (
+                    <PluksangLoginStep onSuccess={handlePluksangSuccess} />
+                  ) : (
+                    <LoginStep onSuccess={handleLoginSuccess} />
+                  )}
                 </motion.div>
               ) : (
                 <motion.div

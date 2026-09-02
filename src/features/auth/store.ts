@@ -2,10 +2,14 @@ import type { Tables } from '@lib/supabase/database.types';
 import type { OrgMembership } from '@store/orgStore';
 import type { Session, User } from '@supabase/supabase-js';
 import { atom } from 'jotai';
+import type { PluksangSession } from './pluksangStore';
 
 export type Profile = Tables<'profiles'>;
+export type AuthMode = 'supabase' | 'pluksang';
 
 export type AuthState = {
+  mode: AuthMode | null;
+  pluksangSession: PluksangSession | null;
   user: User | null;
   session: Session | null;
   profile: Profile | null;
@@ -17,6 +21,8 @@ export type AuthState = {
 };
 
 export const authAtom = atom<AuthState>({
+  mode: null,
+  pluksangSession: null,
   user: null,
   session: null,
   profile: null,
@@ -26,11 +32,21 @@ export const authAtom = atom<AuthState>({
   isProfileReady: false,
 });
 
+export const authModeAtom = atom((get) => get(authAtom).mode);
+export const pluksangSessionAtom = atom((get) => get(authAtom).pluksangSession);
 export const userAtom = atom((get) => get(authAtom).user);
 export const sessionAtom = atom((get) => get(authAtom).session);
 export const profileAtom = atom((get) => get(authAtom).profile);
 export const organizationsAtom = atom((get) => get(authAtom).organizations);
 export const isAuthLoadingAtom = atom((get) => get(authAtom).isLoading);
-export const isAuthenticatedAtom = atom((get) => get(authAtom).user !== null);
+export const isAuthenticatedAtom = atom((get) => {
+  const auth = get(authAtom);
+  if (auth.mode === 'pluksang') return auth.pluksangSession !== null;
+  return auth.user !== null;
+});
 export const isAuthInitializedAtom = atom((get) => get(authAtom).isInitialized);
-export const isProfileReadyAtom = atom((get) => get(authAtom).isProfileReady);
+export const isProfileReadyAtom = atom((get) => {
+  const auth = get(authAtom);
+  if (auth.mode === 'pluksang') return auth.isInitialized;
+  return auth.isProfileReady;
+});

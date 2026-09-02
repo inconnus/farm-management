@@ -8,6 +8,8 @@ import {
   NavRoleRoute,
   OrgRequiredRoute,
   OrgSelectPage,
+  PluksangAppShell,
+  PluksangLegacyRedirect,
   ProtectedRoute,
   PublicRoute,
   RegisterPage,
@@ -20,6 +22,18 @@ import { FarmsSidebar } from '@features/farms/components/FarmsSidebar';
 import MapView from '@features/map';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import MapLayout from './layout/map_layout';
+
+const dashboardScreen = (
+  <NavRoleRoute navItem="dashboard">
+    <DashboardScreen />
+  </NavRoleRoute>
+);
+
+const iotCamerasScreen = (
+  <NavRoleRoute navItem="iot-cameras">
+    <KasetkornCameraScreen />
+  </NavRoleRoute>
+);
 
 const App = () => {
   return (
@@ -57,7 +71,28 @@ const App = () => {
       {/* Root redirect */}
       <Route path="/" element={<Navigate to="/auth/login" replace />} />
 
-      {/* Protected app routes — scoped under /:orgSlug */}
+      {/* Legacy pluksang URLs → /dashboard, /iot-cameras, … */}
+      <Route path="/pluksang/*" element={<PluksangLegacyRedirect />} />
+
+      {/* Pluksang mode — no org slug in URL */}
+      <Route
+        path="/dashboard"
+        element={<PluksangAppShell>{dashboardScreen}</PluksangAppShell>}
+      />
+      <Route
+        path="/dashboard/:deviceId"
+        element={<PluksangAppShell>{dashboardScreen}</PluksangAppShell>}
+      />
+      <Route
+        path="/iot-cameras"
+        element={<PluksangAppShell>{iotCamerasScreen}</PluksangAppShell>}
+      />
+      <Route
+        path="/iot-cameras/:deviceId"
+        element={<PluksangAppShell>{iotCamerasScreen}</PluksangAppShell>}
+      />
+
+      {/* Farm management — scoped under /:orgSlug */}
       <Route
         path="/:orgSlug/*"
         element={
@@ -79,14 +114,7 @@ const App = () => {
                       <Route path=":landId" />
                     </Route>
                   </Route>
-                  <Route
-                    path="dashboard"
-                    element={
-                      <NavRoleRoute navItem="dashboard">
-                        <DashboardScreen />
-                      </NavRoleRoute>
-                    }
-                  >
+                  <Route path="dashboard" element={dashboardScreen}>
                     <Route path=":deviceId" />
                   </Route>
                   <Route
@@ -99,14 +127,7 @@ const App = () => {
                   >
                     <Route path=":deviceId" />
                   </Route>
-                  <Route
-                    path="iot-cameras"
-                    element={
-                      <NavRoleRoute navItem="iot-cameras">
-                        <KasetkornCameraScreen />
-                      </NavRoleRoute>
-                    }
-                  >
+                  <Route path="iot-cameras" element={iotCamerasScreen}>
                     <Route path=":deviceId" />
                   </Route>
                 </Routes>

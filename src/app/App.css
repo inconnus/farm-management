@@ -42,8 +42,8 @@ body {
 }
 
 #map-container {
-  flex: 1;
   width: 100%;
+  height: 100%;
   background-color: lightgrey;
 }
 
@@ -162,4 +162,26 @@ body {
 
 .camera-list-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.38);
+}
+
+/* Camera popup — native fullscreen must fill viewport */
+.camera-fs-host:fullscreen,
+.camera-fs-host:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+}
+
+.camera-fs-host:fullscreen > .camera-fs-video-layer,
+.camera-fs-host:-webkit-full-screen > .camera-fs-video-layer {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.camera-fs-host:fullscreen .camera-fs-video-layer [id^='hik-ezuikit-'],
+.camera-fs-host:-webkit-full-screen .camera-fs-video-layer [id^='hik-ezuikit-'] {
+  width: 100% !important;
+  height: 100% !important;
 }

@@ -1,4 +1,5 @@
 import { Column, Row } from '@app/layout';
+import { useAppBasePath } from '@features/auth/hooks/useAppBasePath';
 import { useCamerasQuery } from '@features/dashboard/hooks';
 import { CameraMarker } from '@features/map/components';
 import { devicePopupAtom } from '@features/map/store/devicePopupAtom';
@@ -13,7 +14,9 @@ import { DEFAULT_MAP_OVERVIEW } from 'src/const/map';
 
 const KasetkornCameraScreen = () => {
   const { data: cameras = [], isLoading } = useCamerasQuery();
-  const { deviceId, orgSlug } = useParams();
+  const { deviceId } = useParams();
+  const basePath = useAppBasePath();
+  const iotCamerasPath = `${basePath}/iot-cameras`;
   const map = useAtomValue(mapInstanceAtom);
   const setDevicePopup = useSetAtom(devicePopupAtom);
   const navigate = useNavigate();
@@ -105,7 +108,7 @@ const KasetkornCameraScreen = () => {
                     <Row
                       key={cam.id}
                       onClick={() => {
-                        navigate(`/${orgSlug}/iot-cameras/${cam.id}`);
+                        navigate(`${iotCamerasPath}/${cam.id}`);
                       }}
                       className={`items-center rounded-xl p-2.5 transition-colors cursor-pointer shrink-0 ${
                         isSelected ? 'bg-[#03662c]/10' : 'hover:bg-black/5'
@@ -157,14 +160,14 @@ const KasetkornCameraScreen = () => {
       filteredCameras,
       isLoading,
       navigate,
-      orgSlug,
+      iotCamerasPath,
       searchTerm,
     ],
   );
 
   return (
     <SidebarNav
-      basePath={`/${orgSlug}/iot-cameras`}
+      basePath={iotCamerasPath}
       pages={pages}
       className="absolute right-0 pointer-events-auto bg-white/85 backdrop-blur-xl m-3 rounded-3xl border border-gray-200 shadow-xl w-[380px] max-h-[calc(90vh)] overflow-hidden"
     >
@@ -172,7 +175,7 @@ const KasetkornCameraScreen = () => {
         <CameraMarker
           key={cam.id}
           camera={cam}
-          onClick={(c) => navigate(`/${orgSlug}/iot-cameras/${c.id}`)}
+          onClick={(c) => navigate(`${iotCamerasPath}/${c.id}`)}
         />
       ))}
     </SidebarNav>

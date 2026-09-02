@@ -1,5 +1,6 @@
 import type { CameraData } from '@features/map/components';
 import type { KasetkornCamera } from './api';
+import { DEFAULT_EZVIZ_STREAM_QUALITY } from '@features/camera/data/streamQuality';
 
 export function isGkKasetkornCamera(cam: KasetkornCamera): boolean {
   return cam.deviceSerial.startsWith('GK');
@@ -17,6 +18,9 @@ export function kasetkornCameraToCameraData(
     province: cam.province,
     amphur: cam.amphur,
     tambon: cam.tambon,
+    deviceSerial: cam.deviceSerial,
+    isPTZ: cam.isPTZ,
+    canControl: cam.permission === 'control',
     ...(accessToken
       ? {
           mode: 'hik' as const,
@@ -25,7 +29,7 @@ export function kasetkornCameraToCameraData(
             deviceSerial: cam.deviceSerial,
             code: cam.validateCode,
             channelNo: 1,
-            quality: 1,
+            quality: DEFAULT_EZVIZ_STREAM_QUALITY,
             method: 2,
           },
         }

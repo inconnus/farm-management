@@ -1,4 +1,5 @@
 import { Row } from '@app/layout';
+import { DEFAULT_EZVIZ_STREAM_QUALITY } from '@features/camera/data/streamQuality';
 import {
   fetchCameraToken,
   type KasetkornCamera,
@@ -143,7 +144,7 @@ export function ImportCameraModal({
           device_serial: cam.deviceSerial,
           code: cam.validateCode,
           channel_no: 1,
-          quality: 1,
+          quality: DEFAULT_EZVIZ_STREAM_QUALITY,
           method: 2,
           tambon: cam.tambon,
           amphur: cam.amphur,

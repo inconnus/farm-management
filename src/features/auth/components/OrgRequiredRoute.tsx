@@ -1,6 +1,8 @@
 import { useAtomValue } from 'jotai';
-import { Navigate, useLocation, useParams } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { PLUKSANG_HOME_PATH } from '../pluksangStore';
 import {
+  authModeAtom,
   isAuthInitializedAtom,
   isProfileReadyAtom,
   organizationsAtom,
@@ -14,10 +16,9 @@ export function OrgRequiredRoute({ children }: OrgRequiredRouteProps) {
   const isInitialized = useAtomValue(isAuthInitializedAtom);
   const isProfileReady = useAtomValue(isProfileReadyAtom);
   const organizations = useAtomValue(organizationsAtom);
-  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const authMode = useAtomValue(authModeAtom);
   const location = useLocation();
 
-  // ยังไม่ initialize หรือ orgs ยังโหลดไม่เสร็จ → แสดง spinner รอก่อน ห้าม redirect
   if (!isInitialized || !isProfileReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -48,7 +49,11 @@ export function OrgRequiredRoute({ children }: OrgRequiredRouteProps) {
     );
   }
 
-  // โหลดเสร็จแล้ว — ตรวจสอบว่า slug ตรงกับ org ของ user ไหม
+  if (authMode === 'pluksang') {
+    return <Navigate to={PLUKSANG_HOME_PATH} state={{ from: location }} replace />;
+  }
+
+  const orgSlug = location.pathname.split('/')[1];
   if (!orgSlug || !organizations.find((o) => o.slug === orgSlug)) {
     return <Navigate to="/org/select" state={{ from: location }} replace />;
   }
